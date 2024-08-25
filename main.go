@@ -6,6 +6,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
+	"github.com/Tuanzi-bug/tuan-book/internal/web/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
@@ -35,7 +36,7 @@ func initWebServer() *gin.Engine {
 		//AllowOrigins:     []string{"http://localhost:3000"},
 		AllowCredentials: true,
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
-		ExposeHeaders:    []string{},
+		ExposeHeaders:    []string{"x-jwt-token"},
 		//AllowMethods: []string{"POST"},
 		AllowOriginFunc: func(origin string) bool {
 			fmt.Println(origin)
@@ -43,6 +44,7 @@ func initWebServer() *gin.Engine {
 		},
 		//MaxAge: 12 * time.Hour,
 	}))
+	useJWT(server)
 	return server
 }
 
@@ -57,4 +59,8 @@ func initDB() *gorm.DB {
 		panic(err)
 	}
 	return db
+}
+func useJWT(server *gin.Engine) {
+	login := middleware.JWTMiddlewareBuilder{}
+	server.Use(login.JWTAuthMiddleware())
 }

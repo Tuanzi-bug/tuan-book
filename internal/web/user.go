@@ -6,7 +6,9 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 )
 
 type UserHandler struct {
@@ -95,7 +97,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	if err := ctx.Bind(&req); err != nil {
 		return
 	}
-	err := h.svc.Login(ctx, req.Email, req.Password)
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidUserOrPassword) {
 			ctx.String(http.StatusOK, "用户名或者密码不对")
@@ -104,13 +106,36 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
+	uc := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)), // 设置过期时间
+		},
+		Uid:       u.Id,
+		UserAgent: ctx.GetHeader("User-Agent"),
+	}
+	//使用指定的签名方法创建签名对象
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
+	// 使用指定的secret签名并获得完整的编码后的字符串token
+	tokenStr, err := token.SignedString(JWTKey)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+	}
+	ctx.Header("x-jwt-token", tokenStr)
 	ctx.String(http.StatusOK, "登录成功")
 }
 
-func (h *UserHandler) Edit(context *gin.Context) {
+func (h *UserHandler) Edit(ctx *gin.Context) {
 
 }
 
-func (h *UserHandler) Profile(context *gin.Context) {
+func (h *UserHandler) Profile(ctx *gin.Context) {
+	ctx.String(http.StatusOK, "成功")
+}
 
+var JWTKey = []byte("WnKX59XWgcvePtvFympqvjY2M6R5sXYw")
+
+type UserClaims struct {
+	jwt.RegisteredClaims
+	Uid       int64
+	UserAgent string
 }
