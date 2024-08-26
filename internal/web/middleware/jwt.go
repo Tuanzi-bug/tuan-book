@@ -49,6 +49,13 @@ func (m *JWTMiddlewareBuilder) JWTAuthMiddleware() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+		// 加入user-Agent 增加安全性
+		if uc.UserAgent != ctx.GetHeader("User-Agent") {
+			// 后期我们讲到了监控告警的时候，这个地方要埋点
+			// 能够进来这个分支的，大概率是攻击者
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 		expireTime := uc.ExpiresAt
 		// 剩余过期时间 < 50s 就要刷新
 		if expireTime.Sub(time.Now()) < time.Second*50 {

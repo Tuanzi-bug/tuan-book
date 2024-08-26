@@ -2,15 +2,19 @@ package main
 
 import (
 	"fmt"
+	"github.com/Tuanzi-bug/tuan-book/config"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
 	"github.com/Tuanzi-bug/tuan-book/internal/web/middleware"
+	"github.com/Tuanzi-bug/tuan-book/pkg/gin-plus/middlewares/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"time"
 )
 
 func main() {
@@ -44,12 +48,18 @@ func initWebServer() *gin.Engine {
 		},
 		//MaxAge: 12 * time.Hour,
 	}))
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     config.Config.Redis.Addr,
+		Password: config.Config.Redis.Password,
+	})
+	server.Use(ratelimit.NewBuilder(redisClient,
+		time.Second, 1).Build())
 	useJWT(server)
 	return server
 }
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(192.168.1.3:3306)/tuan_book"))
+	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN))
 	if err != nil {
 		panic(err)
 	}
