@@ -2,6 +2,7 @@ package web
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	regexp "github.com/dlclark/regexp2"
@@ -108,7 +109,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	}
 	uc := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)), // 设置过期时间
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)), // 设置过期时间
 		},
 		Uid:       u.Id,
 		UserAgent: ctx.GetHeader("User-Agent"),
@@ -129,7 +130,19 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Profile(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "成功")
+	c, _ := ctx.Get("claims")
+	claims, ok := c.(UserClaims)
+	if !ok {
+		// 监控住这里
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	u, err := h.svc.Profile(ctx, claims.Uid)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	ctx.String(http.StatusOK, fmt.Sprintf("%d获取成功", u.Id))
 }
 
 var JWTKey = []byte("WnKX59XWgcvePtvFympqvjY2M6R5sXYw")

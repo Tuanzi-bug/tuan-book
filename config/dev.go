@@ -7,7 +7,7 @@ var Config = config{
 		DSN: "root:root@tcp(192.168.1.3:3306)/tuan_book",
 	},
 	Redis: RedisConfig{
-		Addr:     "192.168.1.3:3306",
+		Addr:     "192.168.1.3:6379",
 		Password: "123456",
 	},
 }

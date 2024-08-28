@@ -4,32 +4,30 @@ import (
 	"fmt"
 	"github.com/Tuanzi-bug/tuan-book/config"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
+	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
 	"github.com/Tuanzi-bug/tuan-book/internal/web/middleware"
-	"github.com/Tuanzi-bug/tuan-book/pkg/gin-plus/middlewares/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"time"
 )
 
 func main() {
 	db := initDB()
 	server := initWebServer()
 	ud := dao.NewUserDAO(db)
-	ur := repository.NewUserRepository(ud)
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     config.Config.Redis.Addr,
+		Password: config.Config.Redis.Password,
+	})
+	ur := repository.NewUserRepository(ud, cache.NewUserCache(redisClient))
 	us := service.NewUserService(ur)
 	hdl := web.NewUserHandler(us)
 	hdl.RegisterRoutes(server)
-	server.POST("/book", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "GET",
-		})
-	})
 	_ = server.Run(":8080")
 }
 func initWebServer() *gin.Engine {
@@ -48,12 +46,13 @@ func initWebServer() *gin.Engine {
 		},
 		//MaxAge: 12 * time.Hour,
 	}))
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     config.Config.Redis.Addr,
-		Password: config.Config.Redis.Password,
-	})
-	server.Use(ratelimit.NewBuilder(redisClient,
-		time.Second, 1).Build())
+	// 限流
+	//redisClient := redis.NewClient(&redis.Options{
+	//	Addr:     config.Config.Redis.Addr,
+	//	Password: config.Config.Redis.Password,
+	//})
+	//server.Use(ratelimit.NewBuilder(redisClient,
+	//	time.Second, 1).Build())
 	useJWT(server)
 	return server
 }

@@ -67,7 +67,7 @@ func (m *JWTMiddlewareBuilder) JWTAuthMiddleware() gin.HandlerFunc {
 				log.Println(err)
 			}
 		}
-		ctx.Set("user", uc)
+		ctx.Set("claims", uc)
 		ctx.Next()
 	}
 }

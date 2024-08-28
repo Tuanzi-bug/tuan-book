@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -29,7 +28,7 @@ func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
 	return svc.repo.Create(ctx, u)
 }
 
-func (svc *UserService) Login(ctx *gin.Context, email string, password string) (domain.User, error) {
+func (svc *UserService) Login(ctx context.Context, email string, password string) (domain.User, error) {
 	// 获取数据库
 	u, err := svc.repo.FindByEmail(ctx, email)
 	if err != nil {
@@ -41,4 +40,8 @@ func (svc *UserService) Login(ctx *gin.Context, email string, password string) (
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
 	return u, nil
+}
+
+func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, error) {
+	return svc.repo.FindById(ctx, id)
 }
