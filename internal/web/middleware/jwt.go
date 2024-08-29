@@ -14,7 +14,11 @@ type JWTMiddlewareBuilder struct {
 	ignorePaths []string
 }
 
-func (m *JWTMiddlewareBuilder) JWTAuthMiddleware() gin.HandlerFunc {
+func NewJWTMiddlewareBuilder() *JWTMiddlewareBuilder {
+	return &JWTMiddlewareBuilder{ignorePaths: make([]string, 0)}
+}
+
+func (m *JWTMiddlewareBuilder) Build() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
 		for _, p := range m.ignorePaths {
@@ -74,7 +78,7 @@ func (m *JWTMiddlewareBuilder) JWTAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-func (m *JWTMiddlewareBuilder) IgnorePath(path string) *JWTMiddlewareBuilder {
+func (m *JWTMiddlewareBuilder) IgnorePaths(path string) *JWTMiddlewareBuilder {
 	m.ignorePaths = append(m.ignorePaths, path)
 	return m
 }
