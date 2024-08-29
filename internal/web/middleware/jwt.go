@@ -11,14 +11,16 @@ import (
 )
 
 type JWTMiddlewareBuilder struct {
+	ignorePaths []string
 }
 
 func (m *JWTMiddlewareBuilder) JWTAuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
-		if path == "/users/signup" || path == "/users/login" {
-			// 不需要登录校验
-			return
+		for _, p := range m.ignorePaths {
+			if p == path {
+				return
+			}
 		}
 		// 根据约定获取头部 token
 		authCode := ctx.GetHeader("Authorization")
@@ -70,4 +72,9 @@ func (m *JWTMiddlewareBuilder) JWTAuthMiddleware() gin.HandlerFunc {
 		ctx.Set("claims", uc)
 		ctx.Next()
 	}
+}
+
+func (m *JWTMiddlewareBuilder) IgnorePath(path string) *JWTMiddlewareBuilder {
+	m.ignorePaths = append(m.ignorePaths, path)
+	return m
 }

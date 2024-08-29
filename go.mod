@@ -4,10 +4,13 @@ go 1.21.6
 
 require (
 	github.com/dlclark/regexp2 v1.11.4
+	github.com/ecodeclub/ekit v0.0.9
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0
+	github.com/go-sql-driver/mysql v1.7.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/redis/go-redis/v9 v9.6.1
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.992
 	golang.org/x/crypto v0.23.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.11
@@ -25,7 +28,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
-	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -37,6 +39,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.992 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	golang.org/x/arch v0.8.0 // indirect

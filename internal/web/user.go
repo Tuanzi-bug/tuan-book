@@ -16,18 +16,21 @@ type UserHandler struct {
 	emailRexExp    *regexp.Regexp
 	passwordRexExp *regexp.Regexp
 	svc            *service.UserService
+	codeSvc        *service.CodeService
 }
 
 const (
 	emailRegexPattern    = `^\w+([-+.]\w+)*@\w+([-.]\w+)*.\w+([-.]\w+)*$`
 	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+	biz                  = "login"
 )
 
-func NewUserHandler(userService *service.UserService) *UserHandler {
+func NewUserHandler(userService *service.UserService, codeSvc *service.CodeService) *UserHandler {
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
 		svc:            userService,
+		codeSvc:        codeSvc,
 	}
 }
 
@@ -42,6 +45,9 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/edit", h.Edit)
 	// GET /users/profile
 	ug.GET("/profile", h.Profile)
+	//
+	ug.POST("/login_sms/code/send", h.SendLoginSMSCode)
+	ug.POST("/login/sms", h.LoginSMS)
 }
 func (h *UserHandler) SignUp(ctx *gin.Context) {
 	type SignUpReq struct {
@@ -89,6 +95,25 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "注册成功")
 }
 
+func (h *UserHandler) setJWTToken(ctx *gin.Context, uid int64) error {
+	uc := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)), // 设置过期时间
+		},
+		Uid:       uid,
+		UserAgent: ctx.GetHeader("User-Agent"),
+	}
+	//使用指定的签名方法创建签名对象
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
+	// 使用指定的secret签名并获得完整的编码后的字符串token
+	tokenStr, err := token.SignedString(JWTKey)
+	if err != nil {
+		return err
+	}
+	ctx.Header("x-jwt-token", tokenStr)
+	return nil
+}
+
 func (h *UserHandler) Login(ctx *gin.Context) {
 	type LoginReq struct {
 		Email    string
@@ -107,21 +132,10 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	uc := UserClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)), // 设置过期时间
-		},
-		Uid:       u.Id,
-		UserAgent: ctx.GetHeader("User-Agent"),
-	}
-	//使用指定的签名方法创建签名对象
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
-	// 使用指定的secret签名并获得完整的编码后的字符串token
-	tokenStr, err := token.SignedString(JWTKey)
-	if err != nil {
+	if err := h.setJWTToken(ctx, u.Id); err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		return
 	}
-	ctx.Header("x-jwt-token", tokenStr)
 	ctx.String(http.StatusOK, "登录成功")
 }
 
@@ -143,6 +157,61 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 		return
 	}
 	ctx.String(http.StatusOK, fmt.Sprintf("%d获取成功", u.Id))
+}
+
+func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
+	type Req struct {
+		Phone string `json:"phone"`
+	}
+
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		fmt.Println(err)
+		return
+	}
+	err := h.codeSvc.Send(ctx, biz, req.Phone)
+	switch {
+	case err == nil:
+		ctx.String(http.StatusOK, "发送成功")
+	case errors.Is(err, service.ErrCodeSendTooMany):
+		ctx.String(http.StatusOK, "发生太频繁")
+	default:
+		ctx.String(http.StatusOK, "系统错误")
+	}
+
+}
+
+func (h *UserHandler) LoginSMS(ctx *gin.Context) {
+	type Req struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	// 首先校验code
+	ok, err := h.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if !ok {
+		ctx.String(http.StatusOK, "验证码有误")
+		return
+	}
+	// 老用户就获取数据，新用户就生成
+	u, err := h.svc.FindOrCreate(ctx, req.Phone)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	// 进行登录设置
+	if err := h.setJWTToken(ctx, u.Id); err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	ctx.String(http.StatusOK, "登录成功")
 }
 
 var JWTKey = []byte("WnKX59XWgcvePtvFympqvjY2M6R5sXYw")

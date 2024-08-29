@@ -8,6 +8,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	ErrCodeVerifyTooManyTimes = repository.ErrCodeVerifyTooManyTimes
+	ErrCodeSendTooMany        = repository.ErrCodeSendTooMany
+)
 var ErrInvalidUserOrPassword = errors.New("用户不存在或者密码不对")
 
 type UserService struct {
@@ -44,4 +48,21 @@ func (svc *UserService) Login(ctx context.Context, email string, password string
 
 func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, error) {
 	return svc.repo.FindById(ctx, id)
+}
+
+func (svc *UserService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+	u, err := svc.repo.FindByPhone(ctx, phone)
+	if !errors.Is(err, repository.ErrUserNotFound) {
+		// 无论是有问题还是没问题，都会进入这个。用户找不到情况就会执行下面的创建部分
+		return u, err
+	}
+	ud := domain.User{
+		Phone: phone,
+	}
+	err = svc.repo.Create(ctx, ud)
+	if err != nil && !errors.Is(err, repository.ErrUserDuplicate) {
+		return u, err
+	}
+	// 发生冲突就再查一遍
+	return svc.repo.FindByPhone(ctx, phone)
 }

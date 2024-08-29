@@ -7,6 +7,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
+	"github.com/Tuanzi-bug/tuan-book/internal/service/sms/memory"
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
 	"github.com/Tuanzi-bug/tuan-book/internal/web/middleware"
 	"github.com/gin-contrib/cors"
@@ -26,7 +27,9 @@ func main() {
 	})
 	ur := repository.NewUserRepository(ud, cache.NewUserCache(redisClient))
 	us := service.NewUserService(ur)
-	hdl := web.NewUserHandler(us)
+	uc := repository.NewCodeRepository(cache.NewCodeCache(redisClient))
+	ucode := service.NewCodeService(uc, memory.NewService())
+	hdl := web.NewUserHandler(us, ucode)
 	hdl.RegisterRoutes(server)
 	_ = server.Run(":8080")
 }
@@ -71,5 +74,9 @@ func initDB() *gorm.DB {
 }
 func useJWT(server *gin.Engine) {
 	login := middleware.JWTMiddlewareBuilder{}
-	server.Use(login.JWTAuthMiddleware())
+	server.Use(login.IgnorePath("/users/signup").
+		IgnorePath("/users/login").
+		IgnorePath("/users/login_sms/code/send").
+		IgnorePath("/users/login/sms").
+		JWTAuthMiddleware())
 }
