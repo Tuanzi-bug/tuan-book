@@ -15,8 +15,8 @@ import (
 type UserHandler struct {
 	emailRexExp    *regexp.Regexp
 	passwordRexExp *regexp.Regexp
-	svc            *service.UserService
-	codeSvc        *service.CodeService
+	svc            service.UserService
+	codeSvc        service.CodeService
 }
 
 const (
@@ -25,7 +25,7 @@ const (
 	biz                  = "login"
 )
 
-func NewUserHandler(userService *service.UserService, codeSvc *service.CodeService) *UserHandler {
+func NewUserHandler(userService service.UserService, codeSvc service.CodeService) *UserHandler {
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),

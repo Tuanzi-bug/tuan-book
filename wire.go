@@ -23,8 +23,8 @@ func InitWebServer() *gin.Engine {
 		cache.NewUserCache,
 		cache.NewCodeCache,
 		// 存储层
-		repository.NewUserRepository,
-		repository.NewCodeRepository,
+		repository.NewCacheUserRepository,
+		repository.NewCacheCodeRepository,
 		// 服务层
 		service.NewUserService,
 		service.NewCodeService,
