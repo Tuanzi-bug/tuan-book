@@ -11,8 +11,9 @@ import (
 var (
 	ErrCodeVerifyTooManyTimes = repository.ErrCodeVerifyTooManyTimes
 	ErrCodeSendTooMany        = repository.ErrCodeSendTooMany
+	ErrInvalidUserOrPassword  = errors.New("用户不存在或者密码不对")
+	ErrUserDuplicateEmail     = repository.ErrUserDuplicate
 )
-var ErrInvalidUserOrPassword = errors.New("用户不存在或者密码不对")
 
 type UserService interface {
 	SignUp(ctx context.Context, u domain.User) error
