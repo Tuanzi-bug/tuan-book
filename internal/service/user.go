@@ -5,21 +5,23 @@ import (
 	"errors"
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
+	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	ErrCodeVerifyTooManyTimes = repository.ErrCodeVerifyTooManyTimes
-	ErrCodeSendTooMany        = repository.ErrCodeSendTooMany
-	ErrInvalidUserOrPassword  = errors.New("用户不存在或者密码不对")
-	ErrUserDuplicateEmail     = repository.ErrUserDuplicate
+	// ErrCodeVerifyTooManyTimes = repository.ErrCodeVerifyTooManyTimes
+	ErrCodeSendTooMany       = repository.ErrCodeSendTooMany
+	ErrInvalidUserOrPassword = errors.New("用户不存在或者密码不对")
+	ErrUserDuplicateEmail    = repository.ErrUserDuplicate
 )
 
 type UserService interface {
 	SignUp(ctx context.Context, u domain.User) error
 	Login(ctx context.Context, email string, password string) (domain.User, error)
-	Profile(ctx context.Context, id int64) (domain.User, error)
+	FindById(ctx context.Context, id int64) (domain.User, error)
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
+	UpdateNonSensitiveInfo(ctx *gin.Context, user domain.User) error
 }
 
 type userService struct {
@@ -54,7 +56,7 @@ func (svc *userService) Login(ctx context.Context, email string, password string
 	return u, nil
 }
 
-func (svc *userService) Profile(ctx context.Context, id int64) (domain.User, error) {
+func (svc *userService) FindById(ctx context.Context, id int64) (domain.User, error) {
 	return svc.repo.FindById(ctx, id)
 }
 
@@ -73,4 +75,8 @@ func (svc *userService) FindOrCreate(ctx context.Context, phone string) (domain.
 	}
 	// 发生冲突就再查一遍
 	return svc.repo.FindByPhone(ctx, phone)
+}
+
+func (svc *userService) UpdateNonSensitiveInfo(ctx *gin.Context, user domain.User) error {
+	return svc.repo.UpdateNonSensitiveInfo(ctx, user)
 }

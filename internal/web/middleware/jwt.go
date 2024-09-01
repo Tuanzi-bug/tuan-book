@@ -73,7 +73,7 @@ func (m *JWTMiddlewareBuilder) Build() gin.HandlerFunc {
 				log.Println(err)
 			}
 		}
-		ctx.Set("claims", uc)
+		ctx.Set("user", uc)
 		ctx.Next()
 	}
 }

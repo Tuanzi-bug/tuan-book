@@ -6,6 +6,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
+	"github.com/gin-gonic/gin"
 	"time"
 )
 
@@ -19,6 +20,7 @@ type UserRepository interface {
 	FindByPhone(ctx context.Context, phone string) (domain.User, error)
 	Create(ctx context.Context, u domain.User) error
 	FindById(ctx context.Context, id int64) (domain.User, error)
+	UpdateNonSensitiveInfo(ctx *gin.Context, user domain.User) error
 }
 
 type CacheUserRepository struct {
@@ -71,6 +73,10 @@ func (repo *CacheUserRepository) FindByPhone(ctx context.Context, phone string) 
 	return repo.entityToDomain(u), nil
 }
 
+func (repo *CacheUserRepository) UpdateNonSensitiveInfo(ctx *gin.Context, user domain.User) error {
+	return repo.dao.UpdateById(ctx, repo.domainToEntity(user))
+}
+
 func (repo *CacheUserRepository) domainToEntity(u domain.User) dao.User {
 	return dao.User{
 		Id: u.Id,
@@ -83,6 +89,9 @@ func (repo *CacheUserRepository) domainToEntity(u domain.User) dao.User {
 			Valid:  u.Phone != "",
 		},
 		Password: u.Password,
+		Birthday: u.Birthday.UnixMilli(),
+		AboutMe:  u.AboutMe,
+		Nickname: u.Nickname,
 		Ctime:    u.Ctime.UnixMilli(),
 	}
 }

@@ -144,23 +144,66 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Edit(ctx *gin.Context) {
+	type Req struct {
+		Nickname string `json:"nickname"`
+		Birthday string `json:"birthday"`
+		AboutMe  string `json:"aboutMe"`
+	}
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
 
+	// 获取ID相关信息
+	c, ok := ctx.MustGet("user").(UserClaims)
+	if !ok {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	// 验证用户生日输入
+	birthday, err := time.Parse(time.DateOnly, req.Birthday)
+	if err != nil {
+		ctx.String(http.StatusOK, "生日格式不对")
+		return
+	}
+	err = h.svc.UpdateNonSensitiveInfo(ctx, domain.User{
+		Id:       c.Uid,
+		Nickname: req.Nickname,
+		Birthday: birthday,
+		AboutMe:  req.AboutMe,
+	})
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	ctx.String(http.StatusOK, "更新成功")
 }
 
 func (h *UserHandler) Profile(ctx *gin.Context) {
-	c, _ := ctx.Get("claims")
+	c, _ := ctx.Get("user")
 	claims, ok := c.(UserClaims)
 	if !ok {
 		// 监控住这里
-		ctx.String(http.StatusOK, "系统错误")
+		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-	u, err := h.svc.Profile(ctx, claims.Uid)
+	u, err := h.svc.FindById(ctx, claims.Uid)
 	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+		ctx.String(http.StatusOK, "系统异常")
 		return
 	}
-	ctx.String(http.StatusOK, fmt.Sprintf("%d获取成功", u.Id))
+	type User struct {
+		Nickname string `json:"nickname"`
+		Email    string `json:"email"`
+		AboutMe  string `json:"aboutMe"`
+		Birthday string `json:"birthday"`
+	}
+	ctx.JSON(http.StatusOK, User{
+		Nickname: u.Nickname,
+		Email:    u.Email,
+		AboutMe:  u.AboutMe,
+		Birthday: u.Birthday.Format(time.DateOnly),
+	})
 }
 
 func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
