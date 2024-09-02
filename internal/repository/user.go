@@ -7,12 +7,13 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/gin-gonic/gin"
+	"log"
 	"time"
 )
 
 var (
 	ErrUserDuplicate = dao.ErrUserDuplicate
-	ErrUserNotFound  = dao.ErrUserNotFound
+	ErrUserNotFound  = dao.ErrRecordNotFound
 )
 
 type UserRepository interface {
@@ -59,10 +60,11 @@ func (repo *CacheUserRepository) FindById(ctx context.Context, id int64) (domain
 	// 存入缓存中
 	err = repo.cache.Set(ctx, u)
 	if err != nil {
-		// 需要打监控
-		return domain.User{}, err
+		// 出现问题需要打监控，而不是返回。
+		log.Println(err)
+		//return domain.User{}, err
 	}
-	return u, err
+	return u, nil
 }
 
 func (repo *CacheUserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
@@ -100,6 +102,8 @@ func (repo *CacheUserRepository) entityToDomain(u dao.User) domain.User {
 	return domain.User{
 		Id:       u.Id,
 		Email:    u.Email.String,
+		Birthday: time.UnixMilli(u.Birthday),
+		AboutMe:  u.AboutMe,
 		Password: u.Password,
 		Phone:    u.Phone.String,
 		Ctime:    time.UnixMilli(u.Ctime),

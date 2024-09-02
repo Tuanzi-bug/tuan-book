@@ -3,6 +3,7 @@ module github.com/Tuanzi-bug/tuan-book
 go 1.21.6
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/ecodeclub/ekit v0.0.9
 	github.com/gin-contrib/cors v1.7.2
