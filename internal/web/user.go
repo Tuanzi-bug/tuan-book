@@ -2,7 +2,6 @@ package web
 
 import (
 	"errors"
-	"fmt"
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	regexp "github.com/dlclark/regexp2"
@@ -213,17 +212,32 @@ func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
 
 	var req Req
 	if err := ctx.Bind(&req); err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
+		return
+	}
+	if req.Phone == "" {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "请输入手机号码",
+		})
 		return
 	}
 	err := h.codeSvc.Send(ctx, biz, req.Phone)
 	switch {
 	case err == nil:
-		ctx.String(http.StatusOK, "发送成功")
+		ctx.JSON(http.StatusOK, Result{
+			Msg: "发送成功",
+		})
 	case errors.Is(err, service.ErrCodeSendTooMany):
-		ctx.String(http.StatusOK, "发生太频繁")
+		ctx.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "短信发送太频繁，请稍后再试",
+		})
 	default:
-		ctx.String(http.StatusOK, "系统错误")
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
 	}
 
 }
