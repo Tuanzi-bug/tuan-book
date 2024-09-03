@@ -8,4 +8,6 @@ mock:
 	@mockgen -source=internal/repository/cache/user.go -package=cachemocks -destination=internal/repository/cache/mocks/user.mock.go
 	@mockgen -source=internal/repository/cache/code.go -package=cachemocks -destination=internal/repository/cache/mocks/code.mock.go
 	@mockgen -package=redismocks -destination=internal/repository/cache/redismocks/cmd.mock.go "github.com/redis/go-redis/v9" Cmdable
+	@mockgen -source=internal/service/sms/types.go -package=smsmocks -destination=internal/service/sms/mocks/sms.mock.go
+	@mockgen -source=pkg/limiter/types.go -package=limitermocks -destination=pkg/limiter/mocks/limiter.mock.go
 	@go mod tidy

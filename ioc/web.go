@@ -5,6 +5,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
 	"github.com/Tuanzi-bug/tuan-book/internal/web/middleware"
 	"github.com/Tuanzi-bug/tuan-book/pkg/gin-plus/middlewares/ratelimit"
+	"github.com/Tuanzi-bug/tuan-book/pkg/limiter"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -25,7 +26,8 @@ func InitMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 			IgnorePaths("/users/login_sms/code/send").
 			IgnorePaths("/users/login_sms").
 			IgnorePaths("/users/login").Build(),
-		ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
+		// 采用滑动窗口算法构建限流器：1s内允许1000个请求。具体的数值需要根据压测来决定
+		ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 1000)).Build(),
 	}
 }
 func corsHdl() gin.HandlerFunc {
