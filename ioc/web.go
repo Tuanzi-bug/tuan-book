@@ -3,6 +3,7 @@ package ioc
 import (
 	"fmt"
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
+	myjwt "github.com/Tuanzi-bug/tuan-book/internal/web/jwt"
 	"github.com/Tuanzi-bug/tuan-book/internal/web/middleware"
 	"github.com/Tuanzi-bug/tuan-book/pkg/gin-plus/middlewares/ratelimit"
 	"github.com/Tuanzi-bug/tuan-book/pkg/limiter"
@@ -18,14 +19,15 @@ func InitWebServer(middlewares []gin.HandlerFunc, userHdl *web.UserHandler) *gin
 	userHdl.RegisterRoutes(server)
 	return server
 }
-func InitMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable, hdl myjwt.Handler) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
-		middleware.NewJWTMiddlewareBuilder().
+		middleware.NewJWTMiddlewareBuilder(hdl).
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login_sms/code/send").
 			IgnorePaths("/users/login_sms").
-			IgnorePaths("/users/login").Build(),
+			IgnorePaths("/users/login").
+			IgnorePaths("/users/refresh_token").Build(),
 		// 采用滑动窗口算法构建限流器：1s内允许1000个请求。具体的数值需要根据压测来决定
 		ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 1000)).Build(),
 	}
@@ -36,7 +38,7 @@ func corsHdl() gin.HandlerFunc {
 		//AllowOrigins:     []string{"http://localhost:3000"},
 		AllowCredentials: true,
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
-		ExposeHeaders:    []string{"x-jwt-token"},
+		ExposeHeaders:    []string{"x-jwt-token", "x-refresh-token"},
 		//AllowMethods: []string{"POST"},
 		AllowOriginFunc: func(origin string) bool {
 			fmt.Println(origin)

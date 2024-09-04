@@ -8,6 +8,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
+	myjwt "github.com/Tuanzi-bug/tuan-book/internal/web/jwt"
 	"github.com/Tuanzi-bug/tuan-book/ioc"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
@@ -30,7 +31,10 @@ func InitWebServer() *gin.Engine {
 		service.NewCodeService,
 		ioc.InitSMSService,
 
+		// 控制层
 		web.NewUserHandler,
+		myjwt.NewRedisJWTHandler,
+		// 初始化服务
 		ioc.InitWebServer,
 		ioc.InitMiddlewares,
 	)

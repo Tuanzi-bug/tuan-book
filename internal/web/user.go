@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
+	myjwt "github.com/Tuanzi-bug/tuan-book/internal/web/jwt"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -16,6 +17,7 @@ type UserHandler struct {
 	passwordRexExp *regexp.Regexp
 	svc            service.UserService
 	codeSvc        service.CodeService
+	JWTHandler     myjwt.Handler
 }
 
 const (
@@ -24,12 +26,13 @@ const (
 	biz                  = "login"
 )
 
-func NewUserHandler(userService service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(userService service.UserService, codeSvc service.CodeService, hdl myjwt.Handler) *UserHandler {
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
 		svc:            userService,
 		codeSvc:        codeSvc,
+		JWTHandler:     hdl,
 	}
 }
 
@@ -44,9 +47,10 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/edit", h.Edit)
 	// GET /users/profile
 	ug.GET("/profile", h.Profile)
-	//
 	ug.POST("/login_sms/code/send", h.SendLoginSMSCode)
 	ug.POST("/login/sms", h.LoginSMS)
+	ug.POST("/logout", h.Logout)
+	ug.POST("/refresh_token", h.RefreshToken)
 }
 func (h *UserHandler) SignUp(ctx *gin.Context) {
 	type SignUpReq struct {
@@ -98,25 +102,6 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "注册成功")
 }
 
-func (h *UserHandler) setJWTToken(ctx *gin.Context, uid int64) error {
-	uc := UserClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)), // 设置过期时间
-		},
-		Uid:       uid,
-		UserAgent: ctx.GetHeader("User-Agent"),
-	}
-	//使用指定的签名方法创建签名对象
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
-	// 使用指定的secret签名并获得完整的编码后的字符串token
-	tokenStr, err := token.SignedString(JWTKey)
-	if err != nil {
-		return err
-	}
-	ctx.Header("x-jwt-token", tokenStr)
-	return nil
-}
-
 func (h *UserHandler) Login(ctx *gin.Context) {
 	type LoginReq struct {
 		Email    string
@@ -135,7 +120,8 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	if err := h.setJWTToken(ctx, u.Id); err != nil {
+	// 设置token信息
+	if err := h.JWTHandler.SetLoginToken(ctx, u.Id); err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
@@ -154,7 +140,7 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	}
 
 	// 获取ID相关信息
-	c, ok := ctx.MustGet("user").(UserClaims)
+	c, ok := ctx.MustGet("user").(myjwt.UserClaims)
 	if !ok {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -180,7 +166,7 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 
 func (h *UserHandler) Profile(ctx *gin.Context) {
 	c, _ := ctx.Get("user")
-	claims, ok := c.(UserClaims)
+	claims, ok := c.(myjwt.UserClaims)
 	if !ok {
 		// 监控住这里
 		ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -268,17 +254,47 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 		return
 	}
 	// 进行登录设置
-	if err := h.setJWTToken(ctx, u.Id); err != nil {
+	if err := h.JWTHandler.SetLoginToken(ctx, u.Id); err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
 	ctx.String(http.StatusOK, "登录成功")
 }
 
-var JWTKey = []byte("WnKX59XWgcvePtvFympqvjY2M6R5sXYw")
+func (h *UserHandler) RefreshToken(ctx *gin.Context) {
+	// 因为调用这个接口时候，说明你的accessToken已经过期了，不能进行解析。
+	// 只能通过refreshToken来进行解析获取一些信息
+	tokenStr := h.JWTHandler.ExtractToken(ctx)
+	var rc myjwt.RefreshClaims
+	token, err := jwt.ParseWithClaims(tokenStr, &rc, func(token *jwt.Token) (interface{}, error) {
+		return myjwt.JWTKey, nil
+	})
+	if err != nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	// 检查是否已经退出登录
+	err = h.JWTHandler.CheckSession(ctx, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	// 重新设置accessToken
+	err = h.JWTHandler.SetJWTToken(ctx, rc.Uid, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "刷新成功",
+	})
+}
 
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64
-	UserAgent string
+func (h *UserHandler) Logout(ctx *gin.Context) {
+	err := h.JWTHandler.ClearToken(ctx)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	ctx.String(http.StatusOK, "退出成功")
 }
