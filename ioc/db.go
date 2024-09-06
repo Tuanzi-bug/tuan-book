@@ -1,14 +1,22 @@
 package ioc
 
 import (
-	"github.com/Tuanzi-bug/tuan-book/config"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
+	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 func InitDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN))
+	type Config struct {
+		DSN string `yaml:"dsn"`
+	}
+	var cfg = Config{
+		DSN: "root:root@tcp(192.168.1.3:3306)/tuan_book",
+	}
+	err := viper.UnmarshalKey("mysql", &cfg)
+
+	db, err := gorm.Open(mysql.Open(cfg.DSN))
 	if err != nil {
 		panic(err)
 	}
