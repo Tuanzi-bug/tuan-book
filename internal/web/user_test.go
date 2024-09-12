@@ -161,7 +161,7 @@ func TestUserHandler_SignUp(t *testing.T) {
 			// 启动mock控制器
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			h := NewUserHandler(tc.mock(ctrl), nil)
+			h := NewUserHandler(tc.mock(ctrl), nil, nil)
 			req, err := http.NewRequest(http.MethodPost, "/users/signup", bytes.NewBuffer([]byte(tc.reqBody)))
 			require.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")
