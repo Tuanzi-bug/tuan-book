@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Tuanzi-bug/tuan-book/integration/startup"
+	"github.com/Tuanzi-bug/tuan-book/internal/integration/startup"
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

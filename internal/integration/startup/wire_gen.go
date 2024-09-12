@@ -12,15 +12,19 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
+	"github.com/Tuanzi-bug/tuan-book/internal/web/jwt"
 	"github.com/Tuanzi-bug/tuan-book/ioc"
 	"github.com/gin-gonic/gin"
+	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	v := ioc.InitMiddlewares(cmdable)
+	handler := jwt.NewRedisJWTHandler(cmdable)
+	zapLogger := ioc.InitLogger()
+	v := ioc.InitMiddlewares(cmdable, handler, zapLogger)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
@@ -30,7 +34,23 @@ func InitWebServer() *gin.Engine {
 	codeRepository := repository.NewCacheCodeRepository(codeCache)
 	smsService := ioc.InitSMSService()
 	codeService := service.NewCodeService(codeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, codeService)
+	userHandler := web.NewUserHandler(userService, codeService, handler)
 	engine := ioc.InitWebServer(v, userHandler)
 	return engine
 }
+
+func InitArticleHandler() *web.ArticleHandler {
+	db := ioc.InitDB()
+	articleDAO := dao.NewGROMArticleDAO(db)
+	articleRepository := repository.NewCacheArticleRepository(articleDAO)
+	articleService := service.NewArticleService(articleRepository)
+	articleHandler := web.NewArticleHandler(articleService)
+	return articleHandler
+}
+
+// wire.go:
+
+// 第三方基础依赖
+var thirdPartySet = wire.NewSet(
+	InitRedis, ioc.InitDB, ioc.InitLogger,
+)

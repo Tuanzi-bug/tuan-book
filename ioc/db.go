@@ -21,7 +21,7 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 
-	err = db.AutoMigrate(&dao.User{})
+	err = db.AutoMigrate(&dao.User{}, &dao.Article{})
 	if err != nil {
 		panic(err)
 	}
