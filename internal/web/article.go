@@ -92,3 +92,31 @@ func (h *ArticleHandler) Publish(ctx *gin.Context) {
 		Data: id,
 	})
 }
+
+func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
+	type Req struct {
+		Id int64
+	}
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	u, ok := ctx.MustGet("user").(myjwt.UserClaims)
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Msg: "系统错误"})
+		zap.L().Error("未发现用户 session 信息")
+		return
+	}
+	err := h.svc.Withdraw(ctx, u.Uid, req.Id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Msg:  "系统错误",
+			Code: 5,
+		})
+		zap.L().Error("撤回文章失败！", zap.Int64("uid", u.Uid), zap.Int64("aid", req.Id), zap.Error(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "OK",
+	})
+}

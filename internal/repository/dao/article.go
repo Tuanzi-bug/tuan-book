@@ -14,7 +14,9 @@ type Article struct {
 	Content string `gorm:"type=BLOB"`
 	// 我要根据创作者ID来查询
 	AuthorId int64 `gorm:"index"`
-	Ctime    int64
+	// 状态
+	Status uint8
+	Ctime  int64
 	// 更新时间
 	Utime int64
 }
@@ -23,6 +25,7 @@ type ArticleDAO interface {
 	Insert(ctx context.Context, art Article) (int64, error)
 	UpdateById(ctx context.Context, article Article) error
 	Sync(ctx context.Context, entity Article) (int64, error)
+	SyncStatus(ctx context.Context, uid int64, id int64, status uint8) error
 }
 
 type GROMArticleDAO struct {
@@ -48,6 +51,7 @@ func (dao *GROMArticleDAO) UpdateById(ctx context.Context, article Article) erro
 		"Title":   article.Title,
 		"Content": article.Content,
 		"Utime":   article.Utime,
+		"status":  article.Status,
 	})
 	if res.Error != nil {
 		return res.Error
@@ -85,11 +89,34 @@ func (dao *GROMArticleDAO) Sync(ctx context.Context, article Article) (int64, er
 					"title":   pubArt.Title,
 					"content": pubArt.Content,
 					"utime":   now,
+					"status":  article.Status,
 				}),
 			}).Create(&pubArt).Error
 		return err
 	})
 	return id, err
+}
+
+func (dao *GROMArticleDAO) SyncStatus(ctx context.Context, uid int64, id int64, status uint8) error {
+	now := time.Now().UnixMilli()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 先修改制作库的状态
+		res := tx.Model(&Article{}).Where("id=? and author_id=?", id, uid).Updates(map[string]any{
+			"utime":  now,
+			"status": status,
+		})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected != 1 {
+			return errors.New("ID 不对或者创作者不对")
+		}
+		// 再修改线上库的状态
+		return tx.Model(&PublishedArticle{}).Where("id=? and author_id=?", id, uid).Updates(map[string]any{
+			"utime":  now,
+			"status": status,
+		}).Error
+	})
 }
 
 type PublishedArticle Article
