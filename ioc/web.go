@@ -13,11 +13,12 @@ import (
 	"time"
 )
 
-func InitWebServer(middlewares []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
+func InitWebServer(middlewares []gin.HandlerFunc, userHdl *web.UserHandler, artHandler *web.ArticleHandler) *gin.Engine {
 	// 因为重写了log和recovery中间件
 	server := gin.New()
 	server.Use(middlewares...)
 	userHdl.RegisterRoutes(server)
+	artHandler.RegisterRoutes(server)
 	return server
 }
 func InitMiddlewares(redisClient redis.Cmdable, hdl myjwt.Handler, logger middleware.ZapLogger) []gin.HandlerFunc {
