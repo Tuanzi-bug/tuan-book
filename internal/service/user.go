@@ -16,6 +16,7 @@ var (
 	ErrUserDuplicateEmail    = repository.ErrUserDuplicate
 )
 
+//go:generate mockgen -source=./user.go -package=svcmocks -destination=./mocks/user.mock.go UserService
 type UserService interface {
 	SignUp(ctx context.Context, u domain.User) error
 	Login(ctx context.Context, email string, password string) (domain.User, error)

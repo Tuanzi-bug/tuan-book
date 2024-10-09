@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+//go:generate mockgen -source=./article.go -package=cachemocks -destination=./mocks/article.mock.go ArticleCache
 type ArticleCache interface {
 	// 处理极小的领域：缓存列表的第一页的数据
 	GetFirstPage(ctx context.Context, uid int64) ([]domain.Article, error)

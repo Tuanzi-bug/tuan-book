@@ -28,9 +28,9 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g.POST("/edit", h.Edit)
 	g.POST("/publish", h.Publish)
 	g.POST("/withdraw", h.Withdraw)
+	g.POST("/list", h.List)
 	// 创作者相关的接口
 	a := g.Group("/author")
-	a.POST("/list", h.List)
 	a.GET("/detail/:id", h.Detail)
 	// 线上库的相关接口
 	pub := g.Group("/pub")
@@ -135,7 +135,7 @@ func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
 	})
 }
 
-// List 创作者的文章列表接口
+// List 文章列表接口
 func (h *ArticleHandler) List(ctx *gin.Context) {
 	var page Page
 	if err := ctx.Bind(&page); err != nil {
@@ -203,6 +203,7 @@ func (h *ArticleHandler) Detail(ctx *gin.Context) {
 
 }
 
+// PubDetail 线上库文章详情接口
 func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
