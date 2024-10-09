@@ -7,6 +7,8 @@ type Service interface {
 	Send(ctx context.Context, tplId string, args []string, numbers ...string) error
 }
 
+// 第五周作业
+//https://gitee.com/geektime-geekbang_admin/geektime-basic-go/commit/64dfef3213ee8d5e355f4f6d024fd66067d15991
 // 设计并实现了一个高可用的短信平台
 // 1. 提高可用性：重试机制、客户端限流、failover（轮询，实时检测）
 // 	1.1 实时检测：

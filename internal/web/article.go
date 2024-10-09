@@ -12,13 +12,17 @@ import (
 	"time"
 )
 
+const articleBiz = "article"
+
 type ArticleHandler struct {
-	svc service.ArticleService
+	svc     service.ArticleService
+	intrSvc service.InteractiveService
 }
 
-func NewArticleHandler(svc service.ArticleService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, intrSvc service.InteractiveService) *ArticleHandler {
 	return &ArticleHandler{
-		svc: svc,
+		svc:     svc,
+		intrSvc: intrSvc,
 	}
 }
 
@@ -219,6 +223,14 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			Code: 5,
 		})
 	}
+	go func() {
+		// 记录阅读数
+		err = h.intrSvc.IncrReadCnt(ctx, articleBiz, art.Id)
+		if err != nil {
+			// 记录日志，不影响正常返回
+			zap.L().Error("增加阅读数失败", zap.Int64("aid", art.Id), zap.Error(err))
+		}
+	}()
 
 	ctx.JSON(http.StatusOK, Result{
 		Data: ArticleVo{

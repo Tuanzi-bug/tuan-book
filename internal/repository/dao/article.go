@@ -39,7 +39,7 @@ type GROMArticleDAO struct {
 	db *gorm.DB
 }
 
-func NewGROMArticleDAO(db *gorm.DB) ArticleDAO {
+func NewGORMArticleDAO(db *gorm.DB) ArticleDAO {
 	return &GROMArticleDAO{db: db}
 }
 
@@ -73,7 +73,7 @@ func (dao *GROMArticleDAO) Sync(ctx context.Context, article Article) (int64, er
 	var id = article.Id
 	err := dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var err error
-		dao := NewGROMArticleDAO(tx)
+		dao := NewGORMArticleDAO(tx)
 		// 先对制作库进行更新
 		if id > 0 {
 			err = dao.UpdateById(ctx, article)

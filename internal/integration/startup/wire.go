@@ -21,27 +21,50 @@ var thirdPartySet = wire.NewSet(
 	ioc.InitLogger,
 )
 
+var userSvcProvider = wire.NewSet(
+	dao.NewUserDAO,
+	cache.NewUserCache,
+	repository.NewCacheUserRepository,
+	service.NewUserService)
+
+var articlSvcProvider = wire.NewSet(
+	repository.NewCacheArticleRepository,
+	cache.NewArticleRedisCache,
+	dao.NewGORMArticleDAO,
+	service.NewArticleService)
+
+var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
+	cache.NewInteractiveRedisCache,
+	repository.NewCachedInteractiveRepository,
+	service.NewInteractiveService,
+)
+
 func InitWebServer() *gin.Engine {
 	wire.Build(
 		// 最基础的第三方依赖
-		ioc.InitDB,
-		ioc.InitRedis,
-		ioc.InitLogger,
+		//ioc.InitDB,
+		//ioc.InitRedis,
+		//ioc.InitLogger,
+		thirdPartySet,
+		userSvcProvider,
+		articlSvcProvider,
+		interactiveSvcSet,
 		// 数据层
-		dao.NewUserDAO,
+		//dao.NewUserDAO,
 		// 缓存
-		cache.NewUserCache,
+		//cache.NewUserCache,
 		cache.NewCodeCache,
 		// 存储层
-		repository.NewCacheUserRepository,
+		//repository.NewCacheUserRepository,
 		repository.NewCacheCodeRepository,
 		// 服务层
-		service.NewUserService,
+		//service.NewUserService,
 		service.NewCodeService,
 		ioc.InitSMSService,
 
 		// 控制层
 		web.NewUserHandler,
+		web.NewArticleHandler,
 		myjwt.NewRedisJWTHandler,
 		// 初始化服务
 		ioc.InitWebServer,
@@ -50,13 +73,30 @@ func InitWebServer() *gin.Engine {
 	return new(gin.Engine)
 }
 
-func InitArticleHandler() *web.ArticleHandler {
+//func InitArticleHandler() *web.ArticleHandler {
+//	wire.Build(
+//		thirdPartySet,
+//		web.NewArticleHandler,
+//		service.NewArticleService,
+//		repository.NewCacheArticleRepository,
+//		dao.NewGORMArticleDAO,
+//	)
+//	return &web.ArticleHandler{}
+//}
+
+func InitArticleHandler(dao dao.ArticleDAO) *web.ArticleHandler {
 	wire.Build(
 		thirdPartySet,
-		web.NewArticleHandler,
-		service.NewArticleService,
+		userSvcProvider,
+		interactiveSvcSet,
 		repository.NewCacheArticleRepository,
-		dao.NewGROMArticleDAO,
-	)
+		cache.NewArticleRedisCache,
+		service.NewArticleService,
+		web.NewArticleHandler)
 	return &web.ArticleHandler{}
+}
+
+func InitInteractiveService() service.InteractiveService {
+	wire.Build(thirdPartySet, interactiveSvcSet)
+	return service.NewInteractiveService(nil)
 }

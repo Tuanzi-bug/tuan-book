@@ -21,10 +21,16 @@ var userSvcProvider = wire.NewSet(
 	service.NewUserService)
 
 var articleSvcProvider = wire.NewSet(
-	dao.NewGROMArticleDAO,
+	dao.NewGORMArticleDAO,
 	cache.NewArticleRedisCache,
 	repository.NewCacheArticleRepository,
 	service.NewArticleService)
+
+var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
+	cache.NewInteractiveRedisCache,
+	repository.NewCachedInteractiveRepository,
+	service.NewInteractiveService,
+)
 
 func InitWebServer() *gin.Engine {
 	wire.Build(
@@ -35,9 +41,10 @@ func InitWebServer() *gin.Engine {
 		// 接口集合
 		userSvcProvider,
 		articleSvcProvider,
+		interactiveSvcSet,
 		// 数据层
 		//dao.NewUserDAO,
-		//dao.NewGROMArticleDAO,
+		//dao.NewGORMArticleDAO,
 		// 缓存
 		//cache.NewUserCache,
 		cache.NewCodeCache,

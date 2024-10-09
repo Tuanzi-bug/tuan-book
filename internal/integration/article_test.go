@@ -26,7 +26,7 @@ type ArticleTestSuite struct {
 func (s *ArticleTestSuite) SetupSuite() {
 	// 初始化db
 	s.db = ioc.InitDB()
-	hdl := startup.InitArticleHandler()
+	hdl := startup.InitArticleHandler(dao.NewGORMArticleDAO(s.db))
 	server := gin.Default()
 	server.Use(func(ctx *gin.Context) {
 		ctx.Set("user", myjwt.UserClaims{Uid: 123})
