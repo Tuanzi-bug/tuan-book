@@ -41,6 +41,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	pub.GET("/detail/:id", h.PubDetail)
 	// 传入一个参数，true 就是点赞, false 就是不点赞
 	pub.POST("/like", h.Like)
+	pub.POST("/collect", h.Collect)
 }
 
 // Edit 编辑文章接口
@@ -250,6 +251,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	})
 }
 
+// Like 点赞接口
 func (h *ArticleHandler) Like(context *gin.Context) {
 	type Req struct {
 		Id   int64 `json:"id"`
@@ -270,6 +272,27 @@ func (h *ArticleHandler) Like(context *gin.Context) {
 	if err != nil {
 		context.JSON(http.StatusOK, Result{Msg: "系统错误"})
 		zap.L().Error("点赞失败", zap.Int64("uid", uc.Uid), zap.Int64("aid", req.Id), zap.Error(err))
+		return
+	}
+	context.JSON(http.StatusOK, Result{Msg: "OK"})
+}
+
+// Collect 收藏接口
+func (h *ArticleHandler) Collect(context *gin.Context) {
+	// 【用户】收藏了【文章】，放入【收藏夹】
+	type Req struct {
+		Id  int64 `json:"id"`
+		CId int64 `json:"cid"`
+	}
+	var req Req
+	if err := context.Bind(&req); err != nil {
+		return
+	}
+	uc := context.MustGet("user").(myjwt.UserClaims)
+	err := h.intrSvc.Collect(context, articleBiz, req.Id, req.CId, uc.Uid)
+	if err != nil {
+		context.JSON(http.StatusOK, Result{Msg: "系统错误"})
+		zap.L().Error("收藏失败", zap.Error(err), zap.Int64("uid", uc.Uid), zap.Int64("aid", req.Id), zap.Int64("cid", req.CId))
 		return
 	}
 	context.JSON(http.StatusOK, Result{Msg: "OK"})

@@ -11,10 +11,33 @@ type InteractiveDAO interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	InsertLikeInfo(ctx context.Context, biz string, id int64, uid int64) error
 	DeleteLikeInfo(ctx context.Context, biz string, id int64, uid int64) error
+	InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error
 }
 
 type GROMInteractiveDAO struct {
 	db *gorm.DB
+}
+
+func (G *GROMInteractiveDAO) InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error {
+	// 这里的行为和点赞功能一致
+	now := time.Now().UnixMilli()
+	return G.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(&cb).Error
+		if err != nil {
+			return err
+		}
+		return tx.WithContext(ctx).Clauses(clause.OnConflict{DoUpdates: clause.Assignments(map[string]interface{}{
+			// collect_cnt = collect_cnt + 1
+			"collect_cnt": gorm.Expr("collect_cnt + ?", 1),
+			"utime":       now,
+		})}).Create(&Interactive{
+			BizId:      cb.BizId,
+			Biz:        cb.Biz,
+			CollectCnt: 1,
+			Utime:      now,
+			Ctime:      now,
+		}).Error
+	})
 }
 
 func (G *GROMInteractiveDAO) DeleteLikeInfo(ctx context.Context, biz string, id int64, uid int64) error {
@@ -125,4 +148,17 @@ type UserLikeBiz struct {
 	Status int
 	Utime  int64
 	Ctime  int64
+}
+
+type UserCollectionBiz struct {
+	Id int64 `gorm:"primaryKey,autoIncrement"`
+	// 这边还是保留了了唯一索引
+	Uid   int64  `gorm:"uniqueIndex:uid_biz_type_id"`
+	BizId int64  `gorm:"uniqueIndex:uid_biz_type_id"`
+	Biz   string `gorm:"type:varchar(128);uniqueIndex:uid_biz_type_id"`
+	// 收藏夹的ID
+	// 收藏夹ID本身有索引
+	Cid   int64 `gorm:"index"`
+	Utime int64
+	Ctime int64
 }
