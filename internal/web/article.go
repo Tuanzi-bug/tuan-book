@@ -39,6 +39,8 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	// 线上库的相关接口
 	pub := g.Group("/pub")
 	pub.GET("/detail/:id", h.PubDetail)
+	// 传入一个参数，true 就是点赞, false 就是不点赞
+	pub.POST("/like", h.Like)
 }
 
 // Edit 编辑文章接口
@@ -246,4 +248,29 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			Utime:  art.Utime.Format(time.DateTime),
 		},
 	})
+}
+
+func (h *ArticleHandler) Like(context *gin.Context) {
+	type Req struct {
+		Id   int64 `json:"id"`
+		Like bool  `json:"like"`
+	}
+	var req Req
+	if err := context.Bind(&req); err != nil {
+		return
+	}
+	uc := context.MustGet("user").(myjwt.UserClaims)
+	// 在这里聚合点赞和取消点赞的服务
+	var err error
+	if req.Like {
+		err = h.intrSvc.Like(context, articleBiz, req.Id, uc.Uid)
+	} else {
+		err = h.intrSvc.CancelLike(context, articleBiz, req.Id, uc.Uid)
+	}
+	if err != nil {
+		context.JSON(http.StatusOK, Result{Msg: "系统错误"})
+		zap.L().Error("点赞失败", zap.Int64("uid", uc.Uid), zap.Int64("aid", req.Id), zap.Error(err))
+		return
+	}
+	context.JSON(http.StatusOK, Result{Msg: "OK"})
 }

@@ -9,11 +9,38 @@ import (
 
 type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
+	IncrLike(ctx context.Context, biz string, id int64, uid int64) error
+	DecrLike(ctx context.Context, biz string, id int64, uid int64) error
 }
 
 type CachedInteractiveRepository struct {
 	dao   dao.InteractiveDAO
 	cache cache.InteractiveCache
+}
+
+func (c *CachedInteractiveRepository) IncrLike(ctx context.Context, biz string, id int64, uid int64) error {
+	// 点赞是一个高频的访问数据，需要考虑缓存方案
+	err := c.dao.InsertLikeInfo(ctx, biz, id, uid)
+	go func() {
+		er := c.cache.IncrLikeCntIfPresent(ctx, biz, id)
+		if er != nil {
+			// 记录日志，不影响主流程
+			zap.L().Error("cache IncrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id), zap.Int64("uid", uid))
+		}
+	}()
+	return err
+}
+
+func (c *CachedInteractiveRepository) DecrLike(ctx context.Context, biz string, id int64, uid int64) error {
+	err := c.dao.DeleteLikeInfo(ctx, biz, id, uid)
+	go func() {
+		er := c.cache.DecrLikeCntIfPresent(ctx, biz, id)
+		if er != nil {
+			// 记录日志，不影响主流程
+			zap.L().Error("cache DecrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id), zap.Int64("uid", uid))
+		}
+	}()
+	return err
 }
 
 func (c *CachedInteractiveRepository) IncrReadCnt(ctx context.Context, biz string, bizId int64) error {

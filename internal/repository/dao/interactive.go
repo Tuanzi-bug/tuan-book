@@ -9,10 +9,72 @@ import (
 
 type InteractiveDAO interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
+	InsertLikeInfo(ctx context.Context, biz string, id int64, uid int64) error
+	DeleteLikeInfo(ctx context.Context, biz string, id int64, uid int64) error
 }
 
 type GROMInteractiveDAO struct {
 	db *gorm.DB
+}
+
+func (G *GROMInteractiveDAO) DeleteLikeInfo(ctx context.Context, biz string, id int64, uid int64) error {
+	// 对点赞数据的删除，如果真实删除会导致磁盘有很多空洞影响性能
+	// 同时希望保留用户的点赞记录，所以采用逻辑删除
+	// 需要修改两个表：总数据表和用户点赞表，需要使用事务保证数据一致性
+	now := time.Now().UnixMilli()
+	return G.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 更新用户点赞表
+		err := tx.Model(&UserLikeBiz{}).Where("uid = ? AND biz_id = ? AND biz = ?", uid, id, biz).Updates(map[string]interface{}{
+			"status": 0,
+			"utime":  now,
+		}).Error
+		if err != nil {
+			return err
+		}
+		// 更新总数据表
+		return tx.Model(&Interactive{}).Where("biz_id = ? AND biz = ?", id, biz).Updates(map[string]interface{}{
+			"like_cnt": gorm.Expr("like_cnt - ?", 1),
+			"utime":    now,
+		}).Error
+	})
+}
+
+func (G *GROMInteractiveDAO) InsertLikeInfo(ctx context.Context, biz string, id int64, uid int64) error {
+	// 点赞数据可能不存在，所以需要考虑upsert语义
+	// 需要修改两个表：总数据表和用户点赞表，需要使用事务保证数据一致性
+	now := time.Now().UnixMilli()
+	return G.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 更新用户点赞表
+		err := tx.Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"utime":  now,
+				"status": 1,
+			}),
+		}).Create(&UserLikeBiz{
+			Uid:    uid,
+			BizId:  id,
+			Biz:    biz,
+			Status: 1,
+			Utime:  now,
+			Ctime:  now,
+		}).Error
+		if err != nil {
+			return err
+		}
+		// 更新总数据表
+		return tx.WithContext(ctx).Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				// like_cnt = like_cnt + 1
+				"like_cnt": gorm.Expr("like_cnt + ?", 1),
+				"utime":    now,
+			})}).Create(&Interactive{
+			BizId:   id,
+			Biz:     biz,
+			LikeCnt: 1,
+			Utime:   now,
+			Ctime:   now,
+		}).Error
+	})
 }
 
 func (G *GROMInteractiveDAO) IncrReadCnt(ctx context.Context, biz string, bizId int64) error {
@@ -51,4 +113,16 @@ type Interactive struct {
 	CollectCnt int64
 	Utime      int64
 	Ctime      int64
+}
+
+// UserLikeBiz 用户点赞业务表
+type UserLikeBiz struct {
+	Id    int64  `gorm:"primaryKey,autoIncrement"`
+	Uid   int64  `gorm:"uniqueIndex:uid_biz_type_id"`
+	BizId int64  `gorm:"uniqueIndex:uid_biz_type_id"`
+	Biz   string `gorm:"type:varchar(128);uniqueIndex:uid_biz_type_id"`
+	// 0：未点赞 1：已点赞
+	Status int
+	Utime  int64
+	Ctime  int64
 }

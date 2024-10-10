@@ -8,6 +8,7 @@ import (
 )
 
 const fieldReadCnt = "read_cnt"
+const fieldLikeCnt = "like_cnt"
 
 var (
 	//go:embed lua/incr_cnt.lua
@@ -16,10 +17,20 @@ var (
 
 type InteractiveCache interface {
 	IncrReadCntIfPresent(ctx context.Context, biz string, bizId int64) error
+	IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
+	DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 }
 
 type InteractiveRedisCache struct {
 	client redis.Cmdable
+}
+
+func (i *InteractiveRedisCache) IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error {
+	return i.client.Eval(ctx, luaIncrCnt, []string{i.key(biz, bizId)}, fieldLikeCnt, 1).Err()
+}
+
+func (i *InteractiveRedisCache) DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error {
+	return i.client.Eval(ctx, luaIncrCnt, []string{i.key(biz, bizId)}, fieldLikeCnt, -1).Err()
 }
 
 func (i *InteractiveRedisCache) IncrReadCntIfPresent(ctx context.Context, biz string, bizId int64) error {
