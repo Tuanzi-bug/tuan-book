@@ -12,10 +12,31 @@ type InteractiveDAO interface {
 	InsertLikeInfo(ctx context.Context, biz string, id int64, uid int64) error
 	DeleteLikeInfo(ctx context.Context, biz string, id int64, uid int64) error
 	InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error
+	Get(ctx context.Context, biz string, id int64) (Interactive, error)
+	GetLikeInfo(ctx context.Context, biz string, id int64, uid int64) (UserLikeBiz, error)
+	GetCollectInfo(ctx context.Context, biz string, id int64, uid int64) (UserCollectionBiz, error)
 }
 
 type GROMInteractiveDAO struct {
 	db *gorm.DB
+}
+
+func (G *GROMInteractiveDAO) GetCollectInfo(ctx context.Context, biz string, id int64, uid int64) (UserCollectionBiz, error) {
+	var ucb UserCollectionBiz
+	err := G.db.WithContext(ctx).Where("uid = ? AND biz_id = ? AND biz = ?", uid, id, biz).First(&ucb).Error
+	return ucb, err
+}
+
+func (G *GROMInteractiveDAO) GetLikeInfo(ctx context.Context, biz string, id int64, uid int64) (UserLikeBiz, error) {
+	var ulb UserLikeBiz
+	err := G.db.WithContext(ctx).Where("biz = ? AND biz_id = ? AND uid = ? AND status = ?", biz, id, uid, 1).First(&ulb).Error
+	return ulb, err
+}
+
+func (G *GROMInteractiveDAO) Get(ctx context.Context, biz string, id int64) (Interactive, error) {
+	var intr Interactive
+	err := G.db.WithContext(ctx).Where("biz = ? AND biz_id = ?", biz, id).First(&intr).Error
+	return intr, err
 }
 
 func (G *GROMInteractiveDAO) InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error {

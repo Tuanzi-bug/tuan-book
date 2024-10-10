@@ -7,6 +7,7 @@ import (
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"net/http"
 	"strconv"
 	"time"
@@ -219,12 +220,32 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 		zap.L().Warn("PubDetail 获取 id 参数错误", zap.String("id", idStr), zap.Error(err))
 		return
 	}
-	art, err := h.svc.GetPubById(ctx, id)
+	// 在这里不仅要获取文章详情，还要获取阅读数，点赞数，收藏数
+	// 这些任务并发进行更加高效
+	var (
+		eg   errgroup.Group
+		art  domain.Article
+		intr domain.Interactive
+	)
+	eg.Go(func() error {
+		var er error
+		art, er = h.svc.GetPubById(ctx, id)
+		return er
+	})
+	//art, err := h.svc.GetPubById(ctx, id)
+	uc := ctx.MustGet("user").(myjwt.UserClaims)
+	eg.Go(func() error {
+		var er error
+		intr, er = h.intrSvc.Get(ctx, articleBiz, id, uc.Uid)
+		return er
+	})
+	err = eg.Wait()
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Msg:  "系统错误",
 			Code: 5,
 		})
+		return
 	}
 	go func() {
 		// 记录阅读数
@@ -247,6 +268,12 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			Status: art.Status.ToUint8(),
 			Ctime:  art.Ctime.Format(time.DateTime),
 			Utime:  art.Utime.Format(time.DateTime),
+
+			ReadCnt:    intr.ReadCnt,
+			CollectCnt: intr.CollectCnt,
+			LikeCnt:    intr.LikeCnt,
+			Liked:      intr.Liked,
+			Collected:  intr.Collected,
 		},
 	})
 }

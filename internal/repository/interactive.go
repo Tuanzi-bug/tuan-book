@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"go.uber.org/zap"
@@ -12,11 +14,62 @@ type InteractiveRepository interface {
 	IncrLike(ctx context.Context, biz string, id int64, uid int64) error
 	DecrLike(ctx context.Context, biz string, id int64, uid int64) error
 	AddCollectItem(ctx context.Context, biz string, id int64, cid int64, uid int64) error
+	Get(ctx context.Context, biz string, id int64) (domain.Interactive, error)
+	Liked(ctx context.Context, biz string, id int64, uid int64) (bool, error)
+	Collected(ctx context.Context, biz string, id int64, uid int64) (bool, error)
 }
-
 type CachedInteractiveRepository struct {
 	dao   dao.InteractiveDAO
 	cache cache.InteractiveCache
+}
+
+func (c *CachedInteractiveRepository) Collected(ctx context.Context, biz string, id int64, uid int64) (bool, error) {
+	_, err := c.dao.GetCollectInfo(ctx, biz, id, uid)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, dao.ErrRecordNotFound):
+		return false, nil
+	default:
+		return false, err
+	}
+}
+
+func (c *CachedInteractiveRepository) Get(ctx context.Context, biz string, id int64) (domain.Interactive, error) {
+	// 获取文章的交互信息
+	// 高频数据需要从缓存中获取，如果缓存中不存在，需要从数据库中获取
+	// 这里面会出现数据不一致的问题，但是阅读数，点赞数，收藏数的数据不一致是可以接受的,不用保证强一致性
+	intr, err := c.cache.Get(ctx, biz, id)
+	if err == nil {
+		return intr, nil
+	}
+	ie, err := c.dao.Get(ctx, biz, id)
+	if err != nil {
+		return domain.Interactive{}, err
+	}
+	res := c.toDomain(ie)
+	// 回写缓存
+	go func() {
+		er := c.cache.Set(ctx, biz, id, res)
+		if er != nil {
+			// 记录日志，不影响主流程
+			zap.L().Error("cache Set failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id))
+		}
+	}()
+	return res, err
+
+}
+
+func (c *CachedInteractiveRepository) Liked(ctx context.Context, biz string, id int64, uid int64) (bool, error) {
+	_, err := c.dao.GetLikeInfo(ctx, biz, id, uid)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, dao.ErrRecordNotFound):
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 func (c *CachedInteractiveRepository) AddCollectItem(ctx context.Context, biz string, id int64, cid int64, uid int64) error {
@@ -85,5 +138,12 @@ func NewCachedInteractiveRepository(dao dao.InteractiveDAO, cache cache.Interact
 	return &CachedInteractiveRepository{
 		dao:   dao,
 		cache: cache,
+	}
+}
+func (c *CachedInteractiveRepository) toDomain(ie dao.Interactive) domain.Interactive {
+	return domain.Interactive{
+		ReadCnt:    ie.ReadCnt,
+		LikeCnt:    ie.LikeCnt,
+		CollectCnt: ie.CollectCnt,
 	}
 }
