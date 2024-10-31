@@ -17,10 +17,28 @@ type InteractiveRepository interface {
 	Get(ctx context.Context, biz string, id int64) (domain.Interactive, error)
 	Liked(ctx context.Context, biz string, id int64, uid int64) (bool, error)
 	Collected(ctx context.Context, biz string, id int64, uid int64) (bool, error)
+	BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error
 }
 type CachedInteractiveRepository struct {
 	dao   dao.InteractiveDAO
 	cache cache.InteractiveCache
+}
+
+func (c *CachedInteractiveRepository) BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error {
+	err := c.dao.BatchIncrReadCnt(ctx, bizs, bizIds)
+	if err != nil {
+		return err
+	}
+	// 添加缓存方案
+	go func() {
+		for i, biz := range bizs {
+			er := c.cache.IncrLikeCntIfPresent(ctx, biz, bizIds[i])
+			if er != nil {
+				zap.L().Error("cache IncrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", bizIds[i]))
+			}
+		}
+	}()
+	return nil
 }
 
 func (c *CachedInteractiveRepository) Collected(ctx context.Context, biz string, id int64, uid int64) (bool, error) {

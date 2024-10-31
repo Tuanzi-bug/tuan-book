@@ -8,7 +8,14 @@ import (
 func main() {
 	// 使用viper配置管理
 	initViper()
-	server := InitWebServer()
+	app := InitWebServer()
+	server := app.server
+	for _, c := range app.consumers {
+		err := c.Start()
+		if err != nil {
+			panic(err)
+		}
+	}
 	_ = server.Run(":8080")
 }
 

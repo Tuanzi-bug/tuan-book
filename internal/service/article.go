@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
+	events "github.com/Tuanzi-bug/tuan-book/internal/events/article"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 //go:generate mockgen -source=./article.go -package=svcmocks -destination=./mocks/article.mock.go ArticleService
@@ -14,16 +16,18 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, uid, id int64) error
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 	GetById(ctx *gin.Context, id int64) (domain.Article, error)
-	GetPubById(ctx *gin.Context, id int64) (domain.Article, error)
+	GetPubById(ctx *gin.Context, id, uid int64) (domain.Article, error)
 }
 
 type articleService struct {
-	repo repository.ArticleRepository
+	repo     repository.ArticleRepository
+	producer events.Producer
 }
 
-func NewArticleService(repo repository.ArticleRepository) ArticleService {
+func NewArticleService(repo repository.ArticleRepository, events events.Producer) ArticleService {
 	return &articleService{
-		repo: repo,
+		repo:     repo,
+		producer: events,
 	}
 }
 
@@ -53,6 +57,18 @@ func (s *articleService) GetById(ctx *gin.Context, id int64) (domain.Article, er
 	return s.repo.GetById(ctx, id)
 }
 
-func (s *articleService) GetPubById(ctx *gin.Context, id int64) (domain.Article, error) {
-	return s.repo.GetPubById(ctx, id)
+func (s *articleService) GetPubById(ctx *gin.Context, id, uid int64) (domain.Article, error) {
+	res, err := s.repo.GetPubById(ctx, id)
+	go func() {
+		if err == nil {
+			er := s.producer.ProduceReadEvent(events.ReadEvent{
+				Aid: id,
+				Uid: uid,
+			})
+			if er != nil {
+				zap.L().Error("produce read event failed", zap.Int64("aid", id), zap.Error(er))
+			}
+		}
+	}()
+	return res, err
 }

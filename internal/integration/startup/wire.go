@@ -3,6 +3,7 @@
 package startup
 
 import (
+	"github.com/Tuanzi-bug/tuan-book/internal/events/article"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
@@ -19,6 +20,8 @@ var thirdPartySet = wire.NewSet(
 	InitRedis,
 	ioc.InitDB,
 	ioc.InitLogger,
+	InitSaramaClient(),
+	InitSyncProducer(),
 )
 
 var userSvcProvider = wire.NewSet(
@@ -31,7 +34,9 @@ var articlSvcProvider = wire.NewSet(
 	repository.NewCacheArticleRepository,
 	cache.NewArticleRedisCache,
 	dao.NewGORMArticleDAO,
-	service.NewArticleService)
+	service.NewArticleService,
+	article.NewSaramaSyncProducer,
+)
 
 var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
 	cache.NewInteractiveRedisCache,
@@ -57,6 +62,7 @@ func InitWebServer() *gin.Engine {
 		// 存储层
 		//repository.NewCacheUserRepository,
 		repository.NewCacheCodeRepository,
+		article.NewSaramaSyncProducer,
 		// 服务层
 		//service.NewUserService,
 		service.NewCodeService,

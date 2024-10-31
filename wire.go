@@ -3,6 +3,7 @@
 package main
 
 import (
+	"github.com/Tuanzi-bug/tuan-book/internal/events/article"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
@@ -10,7 +11,6 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
 	myjwt "github.com/Tuanzi-bug/tuan-book/internal/web/jwt"
 	"github.com/Tuanzi-bug/tuan-book/ioc"
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
 
@@ -24,6 +24,8 @@ var articleSvcProvider = wire.NewSet(
 	dao.NewGORMArticleDAO,
 	cache.NewArticleRedisCache,
 	repository.NewCacheArticleRepository,
+	article.NewSaramaSyncProducer,
+	article.NewInteractiveReadEventConsumer,
 	service.NewArticleService)
 
 var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
@@ -32,12 +34,15 @@ var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
 	service.NewInteractiveService,
 )
 
-func InitWebServer() *gin.Engine {
+func InitWebServer() *App {
 	wire.Build(
 		// 最基础的第三方依赖
 		ioc.InitDB,
 		ioc.InitRedis,
 		ioc.InitLogger,
+		ioc.InitSyncProducer,
+		ioc.InitSaramaClient,
+		ioc.InitConsumers,
 		// 接口集合
 		userSvcProvider,
 		articleSvcProvider,
@@ -66,6 +71,7 @@ func InitWebServer() *gin.Engine {
 		// 初始化服务
 		ioc.InitWebServer,
 		ioc.InitMiddlewares,
+		wire.Struct(new(App), "*"),
 	)
-	return new(gin.Engine)
+	return new(App)
 }
