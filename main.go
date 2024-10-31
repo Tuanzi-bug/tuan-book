@@ -2,20 +2,28 @@ package main
 
 import (
 	"fmt"
+	"github.com/Tuanzi-bug/tuan-book/ioc"
+	"github.com/Tuanzi-bug/tuan-book/pkg/log"
 	"github.com/spf13/viper"
 )
 
 func main() {
 	// 使用viper配置管理
 	initViper()
+	// 启动日志
+	ioc.InitLogger()
 	app := InitWebServer()
 	server := app.server
+	// 启动消费者
+	log.Info("start consumers")
 	for _, c := range app.consumers {
 		err := c.Start()
 		if err != nil {
 			panic(err)
 		}
 	}
+	// 启动web服务
+	log.Info("start web server")
 	_ = server.Run(":8080")
 }
 

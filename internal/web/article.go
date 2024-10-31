@@ -4,6 +4,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	myjwt "github.com/Tuanzi-bug/tuan-book/internal/web/jwt"
+	"github.com/Tuanzi-bug/tuan-book/pkg/log"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -59,7 +60,7 @@ func (h *ArticleHandler) Edit(ctx *gin.Context) {
 	u, ok := ctx.MustGet("user").(myjwt.UserClaims)
 	if !ok {
 		ctx.JSON(http.StatusOK, Result{Msg: "系统错误"})
-		zap.L().Error("未发现用户 session 信息")
+		log.Error("未发现用户 session 信息")
 		return
 	}
 	aid, err := h.svc.Save(ctx, domain.Article{
@@ -72,7 +73,7 @@ func (h *ArticleHandler) Edit(ctx *gin.Context) {
 	})
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Msg: "系统错误"})
-		zap.L().Error("保存帖子失败", zap.Int64("uid", u.Uid), zap.Error(err))
+		log.Error("保存帖子失败", zap.Int64("uid", u.Uid), zap.Error(err))
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{Msg: "帖子保存成功！", Data: aid})
@@ -92,7 +93,7 @@ func (h *ArticleHandler) Publish(ctx *gin.Context) {
 	u, ok := ctx.MustGet("user").(myjwt.UserClaims)
 	if !ok {
 		ctx.JSON(http.StatusOK, Result{Msg: "系统错误"})
-		zap.L().Error("未发现用户 session 信息")
+		log.Error("未发现用户 session 信息")
 		return
 	}
 	id, err := h.svc.Publish(ctx, domain.Article{
@@ -106,7 +107,7 @@ func (h *ArticleHandler) Publish(ctx *gin.Context) {
 			Msg:  "系统错误",
 			Code: 5,
 		})
-		zap.L().Error("保存帖子失败", zap.Int64("uid", u.Uid), zap.Error(err))
+		log.Error("保存帖子失败", zap.Int64("uid", u.Uid), zap.Error(err))
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{
@@ -126,7 +127,7 @@ func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
 	u, ok := ctx.MustGet("user").(myjwt.UserClaims)
 	if !ok {
 		ctx.JSON(http.StatusOK, Result{Msg: "系统错误"})
-		zap.L().Error("未发现用户 session 信息")
+		log.Error("未发现用户 session 信息")
 		return
 	}
 	err := h.svc.Withdraw(ctx, u.Uid, req.Id)
@@ -135,7 +136,7 @@ func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
 			Msg:  "系统错误",
 			Code: 5,
 		})
-		zap.L().Error("撤回文章失败！", zap.Int64("uid", u.Uid), zap.Int64("aid", req.Id), zap.Error(err))
+		log.Error("撤回文章失败！", zap.Int64("uid", u.Uid), zap.Int64("aid", req.Id), zap.Error(err))
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{
@@ -153,7 +154,7 @@ func (h *ArticleHandler) List(ctx *gin.Context) {
 	arts, err := h.svc.GetByAuthor(ctx, uc.Uid, page.Offset, page.Limit)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		zap.L().Error("查找创作者文章失败", zap.Int64("uid", uc.Uid), zap.Int("Limit", page.Limit), zap.Int("Offset", page.Offset), zap.Error(err))
+		log.Error("查找创作者文章失败", zap.Int64("uid", uc.Uid), zap.Int("Limit", page.Limit), zap.Int("Offset", page.Offset), zap.Error(err))
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{Data: slice.Map[domain.Article, ArticleVo](arts, func(idx int, src domain.Article) ArticleVo {
@@ -178,13 +179,13 @@ func (h *ArticleHandler) Detail(ctx *gin.Context) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Msg: "id 参数错误", Code: 4})
-		zap.L().Warn("Detail 获取 id 参数错误", zap.String("id", idStr), zap.Error(err))
+		log.Warn("Detail 获取 id 参数错误", zap.String("id", idStr), zap.Error(err))
 		return
 	}
 	art, err := h.svc.GetById(ctx, id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Msg: "系统错误", Code: 5})
-		zap.L().Error("查找文章失败", zap.Int64("id", id), zap.Error(err))
+		log.Error("查找文章失败", zap.Int64("id", id), zap.Error(err))
 		return
 	}
 	// 涉及到作者的相关信息，需要通过token信息获取个人信息
@@ -192,7 +193,7 @@ func (h *ArticleHandler) Detail(ctx *gin.Context) {
 	// 校验文章作者信息与当前登录用户是否一致
 	if uc.Uid != art.Author.Id {
 		ctx.JSON(http.StatusOK, Result{Msg: "无权查看", Code: 4})
-		zap.L().Warn("无权查看", zap.Int64("uid", uc.Uid), zap.Int64("aid", id))
+		log.Warn("无权查看", zap.Int64("uid", uc.Uid), zap.Int64("aid", id))
 		return
 	}
 	// 返回与前端约定的数据
@@ -217,7 +218,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Msg: "id 参数错误", Code: 4})
-		zap.L().Warn("PubDetail 获取 id 参数错误", zap.String("id", idStr), zap.Error(err))
+		log.Warn("PubDetail 获取 id 参数错误", zap.String("id", idStr), zap.Error(err))
 		return
 	}
 	// 在这里不仅要获取文章详情，还要获取阅读数，点赞数，收藏数
@@ -253,7 +254,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	//	err = h.intrSvc.IncrReadCnt(ctx, articleBiz, art.Id)
 	//	if err != nil {
 	//		// 记录日志，不影响正常返回
-	//		zap.L().Error("增加阅读数失败", zap.Int64("aid", art.Id), zap.Error(err))
+	//		log.Error("增加阅读数失败", zap.Int64("aid", art.Id), zap.Error(err))
 	//	}
 	//}()
 
@@ -299,7 +300,7 @@ func (h *ArticleHandler) Like(context *gin.Context) {
 	}
 	if err != nil {
 		context.JSON(http.StatusOK, Result{Msg: "系统错误"})
-		zap.L().Error("点赞失败", zap.Int64("uid", uc.Uid), zap.Int64("aid", req.Id), zap.Error(err))
+		log.Error("点赞失败", zap.Int64("uid", uc.Uid), zap.Int64("aid", req.Id), zap.Error(err))
 		return
 	}
 	context.JSON(http.StatusOK, Result{Msg: "OK"})
@@ -320,7 +321,7 @@ func (h *ArticleHandler) Collect(context *gin.Context) {
 	err := h.intrSvc.Collect(context, articleBiz, req.Id, req.CId, uc.Uid)
 	if err != nil {
 		context.JSON(http.StatusOK, Result{Msg: "系统错误"})
-		zap.L().Error("收藏失败", zap.Error(err), zap.Int64("uid", uc.Uid), zap.Int64("aid", req.Id), zap.Int64("cid", req.CId))
+		log.Error("收藏失败", zap.Error(err), zap.Int64("uid", uc.Uid), zap.Int64("aid", req.Id), zap.Int64("cid", req.CId))
 		return
 	}
 	context.JSON(http.StatusOK, Result{Msg: "OK"})

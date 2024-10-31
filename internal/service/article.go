@@ -5,6 +5,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	events "github.com/Tuanzi-bug/tuan-book/internal/events/article"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
+	"github.com/Tuanzi-bug/tuan-book/pkg/log"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -66,7 +67,7 @@ func (s *articleService) GetPubById(ctx *gin.Context, id, uid int64) (domain.Art
 				Uid: uid,
 			})
 			if er != nil {
-				zap.L().Error("produce read event failed", zap.Int64("aid", id), zap.Error(er))
+				log.Error("produce read event failed", zap.Int64("aid", id), zap.Error(er))
 			}
 		}
 	}()

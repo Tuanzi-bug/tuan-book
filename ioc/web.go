@@ -21,12 +21,12 @@ func InitWebServer(middlewares []gin.HandlerFunc, userHdl *web.UserHandler, artH
 	artHandler.RegisterRoutes(server)
 	return server
 }
-func InitMiddlewares(redisClient redis.Cmdable, hdl myjwt.Handler, logger middleware.ZapLogger) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable, hdl myjwt.Handler) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
-		// 加入zap中间件
-		middleware.Ginzap(logger, time.RFC3339, true),
-		// 加入Recovery中间件
-		middleware.RecoveryWithZap(logger, true),
+		//// 加入zap中间件
+		//middleware.Ginzap(logger, time.RFC3339, true),
+		//// 加入Recovery中间件
+		//middleware.RecoveryWithZap(logger, true),
 		corsHdl(),
 		middleware.NewJWTMiddlewareBuilder(hdl).
 			IgnorePaths("/users/signup").

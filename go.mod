@@ -6,6 +6,7 @@ toolchain go1.23.1
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/IBM/sarama v1.43.3
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/ecodeclub/ekit v0.0.9
 	github.com/gin-contrib/cors v1.7.2
@@ -15,6 +16,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/redis/go-redis/v9 v9.6.1
+	github.com/sirupsen/logrus v1.9.3
+	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.992
@@ -25,11 +28,11 @@ require (
 	golang.org/x/sync v0.8.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.11
+	k8s.io/klog v1.0.0
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/IBM/sarama v1.43.3 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -77,7 +80,6 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.992 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

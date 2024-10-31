@@ -3,6 +3,7 @@ package saramax
 import (
 	"encoding/json"
 	"github.com/IBM/sarama"
+	"github.com/Tuanzi-bug/tuan-book/pkg/log"
 	"go.uber.org/zap"
 )
 
@@ -31,14 +32,14 @@ func (h *Handler[T]) ConsumeClaim(session sarama.ConsumerGroupSession, claim sar
 		if err != nil {
 			// 消息格式都不对，没啥好处理的
 			// 但是也不能直接返回，在线上的时候要继续处理下去
-			zap.L().Error("反序列化失败", zap.String("topic", msg.Topic), zap.Int32("partition", msg.Partition), zap.Int64("offset", msg.Offset), zap.Error(err))
+			log.Error("反序列化失败", zap.String("topic", msg.Topic), zap.Int32("partition", msg.Partition), zap.Int64("offset", msg.Offset), zap.Error(err))
 			// 不中断，继续下一个
 			session.MarkMessage(msg, "")
 			continue
 		}
 		err = h.fn(msg, t)
 		if err != nil {
-			zap.L().Error("处理消息失败", zap.String("topic", msg.Topic), zap.Int32("partition", msg.Partition), zap.Int64("offset", msg.Offset), zap.Error(err))
+			log.Error("处理消息失败", zap.String("topic", msg.Topic), zap.Int32("partition", msg.Partition), zap.Int64("offset", msg.Offset), zap.Error(err))
 		}
 		session.MarkMessage(msg, "")
 	}

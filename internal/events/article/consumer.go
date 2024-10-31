@@ -6,6 +6,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/Tuanzi-bug/tuan-book/pkg/saramax"
 	"go.uber.org/zap"
+	"log"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func (r *InteractiveReadEventConsumer) Start() error {
 			err := cg.Consume(context.Background(), []string{TopicReadEvent}, saramax.NewBatchHandler[ReadEvent](r.BatchConsume))
 			if err != nil {
 				// 记录日志，不影响主流程
-				zap.L().Error("consume read event failed", zap.Error(err))
+				log.Println("consume read event failed", zap.Error(err))
 			}
 		}
 	}()
@@ -49,13 +50,13 @@ func (r *InteractiveReadEventConsumer) Consume(msg *sarama.ConsumerMessage,
 }
 
 func (r *InteractiveReadEventConsumer) BatchConsume(msgs []*sarama.ConsumerMessage, events []ReadEvent) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	bizs := make([]string, 0, len(events))
 	bizIds := make([]int64, 0, len(events))
 	for _, evt := range events {
 		bizs = append(bizs, "article")
 		bizIds = append(bizIds, evt.Aid)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	return r.repo.BatchIncrReadCnt(ctx, bizs, bizIds)
 }

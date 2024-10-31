@@ -6,6 +6,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
+	"github.com/Tuanzi-bug/tuan-book/pkg/log"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +35,7 @@ func (c *CachedInteractiveRepository) BatchIncrReadCnt(ctx context.Context, bizs
 		for i, biz := range bizs {
 			er := c.cache.IncrLikeCntIfPresent(ctx, biz, bizIds[i])
 			if er != nil {
-				zap.L().Error("cache IncrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", bizIds[i]))
+				log.Error("cache IncrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", bizIds[i]))
 			}
 		}
 	}()
@@ -71,7 +72,7 @@ func (c *CachedInteractiveRepository) Get(ctx context.Context, biz string, id in
 		er := c.cache.Set(ctx, biz, id, res)
 		if er != nil {
 			// 记录日志，不影响主流程
-			zap.L().Error("cache Set failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id))
+			log.Error("cache Set failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id))
 		}
 	}()
 	return res, err
@@ -101,7 +102,7 @@ func (c *CachedInteractiveRepository) AddCollectItem(ctx context.Context, biz st
 		er := c.cache.IncrCollectCntIfPresent(ctx, biz, id)
 		if er != nil {
 			// 记录日志，不影响主流程
-			zap.L().Error("cache IncrCollectCntIfPresent failed", zap.Error(er),
+			log.Error("cache IncrCollectCntIfPresent failed", zap.Error(er),
 				zap.String("biz", biz),
 				zap.Int64("id", id),
 				zap.Int64("uid", uid),
@@ -118,7 +119,7 @@ func (c *CachedInteractiveRepository) IncrLike(ctx context.Context, biz string, 
 		er := c.cache.IncrLikeCntIfPresent(ctx, biz, id)
 		if er != nil {
 			// 记录日志，不影响主流程
-			zap.L().Error("cache IncrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id), zap.Int64("uid", uid))
+			log.Error("cache IncrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id), zap.Int64("uid", uid))
 		}
 	}()
 	return err
@@ -130,7 +131,7 @@ func (c *CachedInteractiveRepository) DecrLike(ctx context.Context, biz string, 
 		er := c.cache.DecrLikeCntIfPresent(ctx, biz, id)
 		if er != nil {
 			// 记录日志，不影响主流程
-			zap.L().Error("cache DecrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id), zap.Int64("uid", uid))
+			log.Error("cache DecrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", id), zap.Int64("uid", uid))
 		}
 	}()
 	return err
@@ -146,7 +147,7 @@ func (c *CachedInteractiveRepository) IncrReadCnt(ctx context.Context, biz strin
 		er := c.cache.IncrReadCntIfPresent(ctx, biz, bizId)
 		if er != nil {
 			// 记录日志，不影响主流程
-			zap.L().Error("cache IncrReadCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("bizId", bizId))
+			log.Error("cache IncrReadCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("bizId", bizId))
 		}
 	}()
 	return nil

@@ -5,6 +5,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
+	"github.com/Tuanzi-bug/tuan-book/pkg/log"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -43,7 +44,7 @@ func (repo *CacheArticleRepository) Create(ctx context.Context, art domain.Artic
 	if err == nil {
 		er := repo.cache.DelFirstPage(ctx, art.Author.Id)
 		if er != nil {
-			zap.L().Error("Create 删除缓存失败", zap.Error(er), zap.Int64("uid", art.Author.Id))
+			log.Error("Create 删除缓存失败", zap.Error(er), zap.Int64("uid", art.Author.Id))
 		}
 	}
 	return id, err
@@ -54,7 +55,7 @@ func (repo *CacheArticleRepository) Update(ctx context.Context, art domain.Artic
 	if err == nil {
 		er := repo.cache.DelFirstPage(ctx, art.Author.Id)
 		if er != nil {
-			zap.L().Error("Update 删除缓存失败", zap.Error(er), zap.Int64("uid", art.Author.Id))
+			log.Error("Update 删除缓存失败", zap.Error(er), zap.Int64("uid", art.Author.Id))
 		}
 	}
 	return err
@@ -66,7 +67,7 @@ func (repo *CacheArticleRepository) Sync(ctx context.Context, art domain.Article
 		er := repo.cache.DelFirstPage(ctx, art.Author.Id)
 		if er != nil {
 			// 也要记录日志
-			zap.L().Error("Sync 删除缓存失败", zap.Error(er), zap.Int64("uid", art.Author.Id))
+			log.Error("Sync 删除缓存失败", zap.Error(er), zap.Int64("uid", art.Author.Id))
 		}
 	}
 	// 当新帖子发布时候，就会被人访问，考虑当做缓存预热
@@ -76,7 +77,7 @@ func (repo *CacheArticleRepository) Sync(ctx context.Context, art domain.Article
 		// 优化点：缓存过期时间，可以根据粉丝数量进行调整
 		user, er := repo.userRepo.FindById(ctx, art.Author.Id)
 		if er != nil {
-			zap.L().Error("获取创作者信息，缓存失败", zap.Error(er), zap.Int64("uid", art.Author.Id))
+			log.Error("获取创作者信息，缓存失败", zap.Error(er), zap.Int64("uid", art.Author.Id))
 			return
 		}
 		art.Author = domain.Author{
@@ -85,7 +86,7 @@ func (repo *CacheArticleRepository) Sync(ctx context.Context, art domain.Article
 		}
 		er = repo.cache.SetPub(ctx, art)
 		if er != nil {
-			zap.L().Error("Sync 预热缓存失败", zap.Error(er), zap.Int64("id", art.Id))
+			log.Error("Sync 预热缓存失败", zap.Error(er), zap.Int64("id", art.Id))
 		}
 	}()
 
@@ -97,7 +98,7 @@ func (repo *CacheArticleRepository) SyncStatus(ctx context.Context, uid int64, i
 	if err == nil {
 		er := repo.cache.DelFirstPage(ctx, uid)
 		if er != nil {
-			zap.L().Error("SyncStatus 删除缓存失败", zap.Error(er), zap.Int64("uid", uid))
+			log.Error("SyncStatus 删除缓存失败", zap.Error(er), zap.Int64("uid", uid))
 		}
 	}
 	return err
@@ -110,7 +111,7 @@ func (repo *CacheArticleRepository) GetByAuthor(ctx context.Context, uid int64, 
 		res, err := repo.cache.GetFirstPage(ctx, uid)
 		if err != nil {
 			// 如果缓存出现了问题，进行记录日志
-			zap.L().Error("缓存未命中", zap.Error(err), zap.Int64("uid", uid))
+			log.Error("缓存未命中", zap.Error(err), zap.Int64("uid", uid))
 		} else {
 			return res, nil
 		}
@@ -129,7 +130,7 @@ func (repo *CacheArticleRepository) GetByAuthor(ctx context.Context, uid int64, 
 		if offset == 0 && limit == 100 {
 			err := repo.cache.SetFirstPage(ctx, uid, res)
 			if err != nil {
-				zap.L().Error("缓存写入失败", zap.Error(err), zap.Int64("uid", uid))
+				log.Error("缓存写入失败", zap.Error(err), zap.Int64("uid", uid))
 			}
 		}
 	}()
@@ -159,7 +160,7 @@ func (repo *CacheArticleRepository) GetById(ctx *gin.Context, id int64) (domain.
 
 		err := repo.cache.Set(ctx, res)
 		if err != nil {
-			zap.L().Error("缓存写入失败", zap.Error(err), zap.Int64("id", id))
+			log.Error("缓存写入失败", zap.Error(err), zap.Int64("id", id))
 		}
 	}()
 	return res, nil
@@ -188,7 +189,7 @@ func (repo *CacheArticleRepository) GetPubById(ctx *gin.Context, id int64) (doma
 		defer cancel()
 		er := repo.cache.SetPub(ctx, res)
 		if er != nil {
-			zap.L().Error("GetPubById 缓存写入失败", zap.Error(er), zap.Int64("id", id))
+			log.Error("GetPubById 缓存写入失败", zap.Error(er), zap.Int64("id", id))
 		}
 	}()
 
@@ -202,7 +203,7 @@ func (repo *CacheArticleRepository) preCache(ctx context.Context, arts []domain.
 	if len(arts) > 0 && len(arts[0].Content) < contentSizeThreshold {
 		err := repo.cache.Set(ctx, arts[0])
 		if err != nil {
-			zap.L().Error("preCache 缓存第一个文章数据写入失败", zap.Error(err), zap.Int64("id", arts[0].Id))
+			log.Error("preCache 缓存第一个文章数据写入失败", zap.Error(err), zap.Int64("id", arts[0].Id))
 		}
 	}
 }

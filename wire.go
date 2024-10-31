@@ -39,7 +39,7 @@ func InitWebServer() *App {
 		// 最基础的第三方依赖
 		ioc.InitDB,
 		ioc.InitRedis,
-		ioc.InitLogger,
+		//ioc.InitLogger,
 		ioc.InitSyncProducer,
 		ioc.InitSaramaClient,
 		ioc.InitConsumers,
