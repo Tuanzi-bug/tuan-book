@@ -30,15 +30,15 @@ func (c *CachedInteractiveRepository) BatchIncrReadCnt(ctx context.Context, bizs
 	if err != nil {
 		return err
 	}
-	// 添加缓存方案
-	go func() {
-		for i, biz := range bizs {
-			er := c.cache.IncrLikeCntIfPresent(ctx, biz, bizIds[i])
-			if er != nil {
-				log.Error("cache IncrLikeCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", bizIds[i]))
-			}
-		}
-	}()
+	//// 添加缓存方案
+	//go func() {
+	//	for i, biz := range bizs {
+	//		er := c.cache.IncrReadCntIfPresent(ctx, biz, bizIds[i])
+	//		if er != nil {
+	//			log.Error("cache IncrReadCntIfPresent failed", zap.Error(er), zap.String("biz", biz), zap.Int64("id", bizIds[i]))
+	//		}
+	//	}
+	//}()
 	return nil
 }
 

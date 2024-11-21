@@ -24,7 +24,7 @@ func main() {
 	}
 	// 启动web服务
 	log.Info("start web server")
-	_ = server.Run(":8080")
+	_ = server.Run(":9080")
 }
 
 func initViper() {
