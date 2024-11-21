@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	svcmocks "github.com/Tuanzi-bug/tuan-book/internal/service/mocks"
@@ -12,9 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestArticleHandler_Publish(t *testing.T) {
@@ -125,7 +126,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 			// 启动mock控制器
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			h := NewArticleHandler(tc.mock(ctrl))
+			h := NewArticleHandler(tc.mock(ctrl), nil)
 			req, err := http.NewRequest(http.MethodPost, "/articles/publish", bytes.NewBuffer([]byte(tc.reqBody)))
 			require.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")

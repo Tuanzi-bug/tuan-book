@@ -19,9 +19,9 @@ import (
 var thirdPartySet = wire.NewSet(
 	InitRedis,
 	ioc.InitDB,
-	ioc.InitLogger,
-	InitSaramaClient(),
-	InitSyncProducer(),
+	// ioc.InitLogger,
+	InitSaramaClient,
+	InitSyncProducer,
 )
 
 var userSvcProvider = wire.NewSet(
@@ -62,7 +62,6 @@ func InitWebServer() *gin.Engine {
 		// 存储层
 		//repository.NewCacheUserRepository,
 		repository.NewCacheCodeRepository,
-		article.NewSaramaSyncProducer,
 		// 服务层
 		//service.NewUserService,
 		service.NewCodeService,
@@ -98,6 +97,7 @@ func InitArticleHandler(dao dao.ArticleDAO) *web.ArticleHandler {
 		repository.NewCacheArticleRepository,
 		cache.NewArticleRedisCache,
 		service.NewArticleService,
+		article.NewSaramaSyncProducer,
 		web.NewArticleHandler)
 	return &web.ArticleHandler{}
 }

@@ -7,6 +7,7 @@
 package startup
 
 import (
+	"github.com/Tuanzi-bug/tuan-book/internal/events/article"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
@@ -23,8 +24,7 @@ import (
 func InitWebServer() *gin.Engine {
 	cmdable := InitRedis()
 	handler := jwt.NewRedisJWTHandler(cmdable)
-	zapLogger := ioc.InitLogger()
-	v := ioc.InitMiddlewares(cmdable, handler, zapLogger)
+	v := ioc.InitMiddlewares(cmdable, handler)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
@@ -38,7 +38,10 @@ func InitWebServer() *gin.Engine {
 	articleDAO := dao.NewGORMArticleDAO(db)
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewCacheArticleRepository(articleDAO, articleCache, userRepository)
-	articleService := service.NewArticleService(articleRepository)
+	client := InitSaramaClient()
+	syncProducer := InitSyncProducer(client)
+	producer := article.NewSaramaSyncProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, producer)
 	interactiveDAO := dao.NewGORMInteractiveDAO(db)
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
 	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, interactiveCache)
@@ -56,7 +59,10 @@ func InitArticleHandler(dao2 dao.ArticleDAO) *web.ArticleHandler {
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewCacheUserRepository(userDAO, userCache)
 	articleRepository := repository.NewCacheArticleRepository(dao2, articleCache, userRepository)
-	articleService := service.NewArticleService(articleRepository)
+	client := InitSaramaClient()
+	syncProducer := InitSyncProducer(client)
+	producer := article.NewSaramaSyncProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, producer)
 	interactiveDAO := dao.NewGORMInteractiveDAO(db)
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
 	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, interactiveCache)
@@ -79,11 +85,12 @@ func InitInteractiveService() service.InteractiveService {
 
 // 第三方基础依赖
 var thirdPartySet = wire.NewSet(
-	InitRedis, ioc.InitDB, ioc.InitLogger,
+	InitRedis, ioc.InitDB, InitSaramaClient,
+	InitSyncProducer,
 )
 
 var userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewCacheUserRepository, service.NewUserService)
 
-var articlSvcProvider = wire.NewSet(repository.NewCacheArticleRepository, cache.NewArticleRedisCache, dao.NewGORMArticleDAO, service.NewArticleService)
+var articlSvcProvider = wire.NewSet(repository.NewCacheArticleRepository, cache.NewArticleRedisCache, dao.NewGORMArticleDAO, service.NewArticleService, article.NewSaramaSyncProducer)
 
 var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO, cache.NewInteractiveRedisCache, repository.NewCachedInteractiveRepository, service.NewInteractiveService)
