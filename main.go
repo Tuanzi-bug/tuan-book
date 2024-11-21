@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/Tuanzi-bug/tuan-book/ioc"
 	"github.com/Tuanzi-bug/tuan-book/pkg/log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
+	"net/http"
 )
 
 func main() {
@@ -13,6 +15,7 @@ func main() {
 	// 启动日志
 	ioc.InitLogger()
 	app := InitWebServer()
+	initPrometheus()
 	server := app.server
 	// 启动消费者
 	log.Info("start consumers")
@@ -35,4 +38,12 @@ func initViper() {
 	}
 	// 监控配置文件变化
 	viper.WatchConfig()
+}
+
+func initPrometheus() {
+	go func() {
+		// 专门给 prometheus 用的端口
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(":9081", nil)
+	}()
 }

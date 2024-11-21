@@ -5,12 +5,10 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/web"
 	myjwt "github.com/Tuanzi-bug/tuan-book/internal/web/jwt"
 	"github.com/Tuanzi-bug/tuan-book/internal/web/middleware"
-	"github.com/Tuanzi-bug/tuan-book/pkg/gin-plus/middlewares/ratelimit"
-	"github.com/Tuanzi-bug/tuan-book/pkg/limiter"
+	"github.com/Tuanzi-bug/tuan-book/pkg/gin-plus/middlewares/prometheus"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-	"time"
 )
 
 func InitWebServer(middlewares []gin.HandlerFunc, userHdl *web.UserHandler, artHandler *web.ArticleHandler) *gin.Engine {
@@ -22,6 +20,12 @@ func InitWebServer(middlewares []gin.HandlerFunc, userHdl *web.UserHandler, artH
 	return server
 }
 func InitMiddlewares(redisClient redis.Cmdable, hdl myjwt.Handler) []gin.HandlerFunc {
+	pb := &prometheus.Builder{
+		Namespace: "tuanzi",
+		Subsystem: "tuan_book",
+		Name:      "gin_http",
+		Help:      "统计 GIN 的HTTP接口数据",
+	}
 	return []gin.HandlerFunc{
 		//// 加入zap中间件
 		//middleware.Ginzap(logger, time.RFC3339, true),
@@ -34,8 +38,10 @@ func InitMiddlewares(redisClient redis.Cmdable, hdl myjwt.Handler) []gin.Handler
 			IgnorePaths("/users/login_sms").
 			IgnorePaths("/users/login").
 			IgnorePaths("/users/refresh_token").Build(),
+		pb.BuildResponseTime(),
+		pb.BuildActiveRequest(),
 		// 采用滑动窗口算法构建限流器：1s内允许1000个请求。具体的数值需要根据压测来决定
-		ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 1000)).Build(),
+		//ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 1000)).Build(),
 	}
 }
 func corsHdl() gin.HandlerFunc {

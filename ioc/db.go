@@ -2,6 +2,8 @@ package ioc
 
 import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
+	"github.com/Tuanzi-bug/tuan-book/pkg/gormx"
+	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -36,27 +38,27 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 
-	//cb := gormx.NewCallbacks(prometheus2.SummaryOpts{
-	//	Namespace: "geektime_daming",
-	//	Subsystem: "webook",
-	//	Name:      "gorm_db",
-	//	Help:      "统计 GORM 的数据库查询",
-	//	ConstLabels: map[string]string{
-	//		"instance_id": "my_instance",
-	//	},
-	//	Objectives: map[float64]float64{
-	//		0.5:   0.01,
-	//		0.75:  0.01,
-	//		0.9:   0.01,
-	//		0.99:  0.001,
-	//		0.999: 0.0001,
-	//	},
-	//})
+	cb := gormx.NewCallbacks(prometheus2.SummaryOpts{
+		Namespace: "tuanzi",
+		Subsystem: "tuan_book",
+		Name:      "gorm_db",
+		Help:      "统计 GORM 的数据库查询",
+		ConstLabels: map[string]string{
+			"instance_id": "my_instance",
+		},
+		Objectives: map[float64]float64{
+			0.5:   0.01,
+			0.75:  0.01,
+			0.9:   0.01,
+			0.99:  0.001,
+			0.999: 0.0001,
+		},
+	})
 
-	//err = db.Use(cb)
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = db.Use(cb)
+	if err != nil {
+		panic(err)
+	}
 
 	err = db.AutoMigrate(&dao.User{}, &dao.Article{}, &dao.PublishedArticle{}, dao.Interactive{}, dao.UserLikeBiz{}, dao.UserCollectionBiz{})
 	if err != nil {

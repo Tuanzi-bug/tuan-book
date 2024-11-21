@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	"github.com/Tuanzi-bug/tuan-book/internal/domain"
+	"github.com/Tuanzi-bug/tuan-book/internal/errs"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
 	myjwt "github.com/Tuanzi-bug/tuan-book/internal/web/jwt"
 	regexp "github.com/dlclark/regexp2"
@@ -92,7 +93,11 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		Password: req.Password,
 	})
 	if errors.Is(err, service.ErrUserDuplicateEmail) {
-		ctx.String(http.StatusOK, "邮箱冲突")
+		//ctx.String(http.StatusOK, "邮箱冲突")
+		ctx.JSON(http.StatusOK, Result{
+			Code: errs.UserDuplicateEmail,
+			Msg:  "邮箱冲突",
+		})
 		return
 	}
 	if err != nil {
