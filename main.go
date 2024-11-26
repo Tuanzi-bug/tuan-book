@@ -17,6 +17,13 @@ func main() {
 	app := InitWebServer()
 	initPrometheus()
 	server := app.server
+	//启动定时任务
+	log.Info("start cron jobs")
+	app.cron.Start()
+	defer func() {
+		// 等待定时任务结束
+		<-app.cron.Stop().Done()
+	}()
 	// 启动消费者
 	log.Info("start consumers")
 	for _, c := range app.consumers {

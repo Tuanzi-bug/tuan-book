@@ -7,7 +7,6 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/Tuanzi-bug/tuan-book/pkg/log"
 	"github.com/ecodeclub/ekit/slice"
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"time"
 )
@@ -19,8 +18,9 @@ type ArticleRepository interface {
 	Sync(ctx context.Context, art domain.Article) (int64, error)
 	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
-	GetById(ctx *gin.Context, id int64) (domain.Article, error)
-	GetPubById(ctx *gin.Context, id int64) (domain.Article, error)
+	GetById(ctx context.Context, id int64) (domain.Article, error)
+	GetPubById(ctx context.Context, id int64) (domain.Article, error)
+	ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]domain.Article, error)
 }
 
 type CacheArticleRepository struct {
@@ -29,6 +29,16 @@ type CacheArticleRepository struct {
 
 	// repository 存在一些缓存机制，不直接访问dao层
 	userRepo UserRepository
+}
+
+func (repo *CacheArticleRepository) ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]domain.Article, error) {
+	arts, err := repo.dao.ListPub(ctx, start, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	return slice.Map[dao.PublishedArticle, domain.Article](arts, func(idx int, src dao.PublishedArticle) domain.Article {
+		return repo.toDomain(dao.Article(src))
+	}), nil
 }
 
 func NewCacheArticleRepository(dao dao.ArticleDAO, articleCache cache.ArticleCache, userRepo UserRepository) ArticleRepository {
@@ -144,7 +154,7 @@ func (repo *CacheArticleRepository) GetByAuthor(ctx context.Context, uid int64, 
 	return res, nil
 }
 
-func (repo *CacheArticleRepository) GetById(ctx *gin.Context, id int64) (domain.Article, error) {
+func (repo *CacheArticleRepository) GetById(ctx context.Context, id int64) (domain.Article, error) {
 	// 先查询缓存内的数据
 	res, err := repo.cache.Get(ctx, id)
 	if err == nil {
@@ -166,7 +176,7 @@ func (repo *CacheArticleRepository) GetById(ctx *gin.Context, id int64) (domain.
 	return res, nil
 }
 
-func (repo *CacheArticleRepository) GetPubById(ctx *gin.Context, id int64) (domain.Article, error) {
+func (repo *CacheArticleRepository) GetPubById(ctx context.Context, id int64) (domain.Article, error) {
 	// 预测：新帖子发布时候，就会被人访问，考虑当做缓存预热
 	res, err := repo.cache.GetPub(ctx, id)
 	if err == nil {

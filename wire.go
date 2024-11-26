@@ -34,6 +34,12 @@ var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
 	service.NewInteractiveService,
 )
 
+var rankingSvcSet = wire.NewSet(
+	cache.NewRankingRedisCache,
+	repository.NewCachedRankingRepository,
+	service.NewBatchRankingService,
+)
+
 func InitWebServer() *App {
 	wire.Build(
 		// 最基础的第三方依赖
@@ -47,6 +53,11 @@ func InitWebServer() *App {
 		userSvcProvider,
 		articleSvcProvider,
 		interactiveSvcSet,
+		rankingSvcSet,
+
+		// 定时任务
+		ioc.InitJobs,
+		ioc.InitRankingJob,
 		// 数据层
 		//dao.NewUserDAO,
 		//dao.NewGORMArticleDAO,

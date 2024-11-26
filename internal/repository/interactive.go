@@ -7,6 +7,7 @@ import (
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
 	"github.com/Tuanzi-bug/tuan-book/pkg/log"
+	"github.com/ecodeclub/ekit/slice"
 	"go.uber.org/zap"
 )
 
@@ -19,10 +20,22 @@ type InteractiveRepository interface {
 	Liked(ctx context.Context, biz string, id int64, uid int64) (bool, error)
 	Collected(ctx context.Context, biz string, id int64, uid int64) (bool, error)
 	BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error
+	GetByIds(ctx context.Context, biz string, ids []int64) ([]domain.Interactive, error)
 }
 type CachedInteractiveRepository struct {
 	dao   dao.InteractiveDAO
 	cache cache.InteractiveCache
+}
+
+func (c *CachedInteractiveRepository) GetByIds(ctx context.Context, biz string, ids []int64) ([]domain.Interactive, error) {
+	inters, err := c.dao.GetByIds(ctx, biz, ids)
+	if err != nil {
+		return nil, err
+	}
+	res := slice.Map[dao.Interactive, domain.Interactive](inters, func(idx int, src dao.Interactive) domain.Interactive {
+		return c.toDomain(src)
+	})
+	return res, nil
 }
 
 func (c *CachedInteractiveRepository) BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error {

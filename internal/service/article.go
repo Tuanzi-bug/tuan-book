@@ -6,8 +6,8 @@ import (
 	events "github.com/Tuanzi-bug/tuan-book/internal/events/article"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/Tuanzi-bug/tuan-book/pkg/log"
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"time"
 )
 
 //go:generate mockgen -source=./article.go -package=svcmocks -destination=./mocks/article.mock.go ArticleService
@@ -16,13 +16,18 @@ type ArticleService interface {
 	Publish(ctx context.Context, article domain.Article) (int64, error)
 	Withdraw(ctx context.Context, uid, id int64) error
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
-	GetById(ctx *gin.Context, id int64) (domain.Article, error)
-	GetPubById(ctx *gin.Context, id, uid int64) (domain.Article, error)
+	GetById(ctx context.Context, id int64) (domain.Article, error)
+	GetPubById(ctx context.Context, id, uid int64) (domain.Article, error)
+	ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error)
 }
 
 type articleService struct {
 	repo     repository.ArticleRepository
 	producer events.Producer
+}
+
+func (s *articleService) ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error) {
+	return s.repo.ListPub(ctx, start, offset, limit)
 }
 
 func NewArticleService(repo repository.ArticleRepository, events events.Producer) ArticleService {
@@ -54,11 +59,11 @@ func (s *articleService) GetByAuthor(ctx context.Context, uid int64, offset int,
 	return s.repo.GetByAuthor(ctx, uid, offset, limit)
 }
 
-func (s *articleService) GetById(ctx *gin.Context, id int64) (domain.Article, error) {
+func (s *articleService) GetById(ctx context.Context, id int64) (domain.Article, error) {
 	return s.repo.GetById(ctx, id)
 }
 
-func (s *articleService) GetPubById(ctx *gin.Context, id, uid int64) (domain.Article, error) {
+func (s *articleService) GetPubById(ctx context.Context, id, uid int64) (domain.Article, error) {
 	res, err := s.repo.GetPubById(ctx, id)
 	go func() {
 		if err == nil {

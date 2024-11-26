@@ -16,10 +16,17 @@ type InteractiveDAO interface {
 	GetLikeInfo(ctx context.Context, biz string, id int64, uid int64) (UserLikeBiz, error)
 	GetCollectInfo(ctx context.Context, biz string, id int64, uid int64) (UserCollectionBiz, error)
 	BatchIncrReadCnt(ctx context.Context, bizs []string, ids []int64) error
+	GetByIds(ctx context.Context, biz string, ids []int64) ([]Interactive, error)
 }
 
 type GROMInteractiveDAO struct {
 	db *gorm.DB
+}
+
+func (G *GROMInteractiveDAO) GetByIds(ctx context.Context, biz string, ids []int64) ([]Interactive, error) {
+	var inters []Interactive
+	err := G.db.WithContext(ctx).Where("biz = ? AND biz_id IN ?", biz, ids).Find(&inters).Error
+	return inters, err
 }
 
 func (G *GROMInteractiveDAO) BatchIncrReadCnt(ctx context.Context, bizs []string, ids []int64) error {
