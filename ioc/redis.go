@@ -3,6 +3,7 @@ package ioc
 import (
 	"context"
 	"github.com/Tuanzi-bug/tuan-book/config"
+	rlock "github.com/gotomicro/redis-lock"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
@@ -30,4 +31,8 @@ func InitRedis() redis.Cmdable {
 		panic(err)
 	}
 	return redisClient
+}
+
+func InitRlockClient(client redis.Cmdable) *rlock.Client {
+	return rlock.NewClient(client)
 }

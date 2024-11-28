@@ -3,13 +3,14 @@ package ioc
 import (
 	"github.com/Tuanzi-bug/tuan-book/internal/job"
 	"github.com/Tuanzi-bug/tuan-book/internal/service"
+	rlock "github.com/gotomicro/redis-lock"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron/v3"
 	"time"
 )
 
-func InitRankingJob(service service.RankingService) job.Job {
-	return job.NewRankingJob(service, time.Second*30)
+func InitRankingJob(service service.RankingService, client *rlock.Client) job.Job {
+	return job.NewRankingJob(service, time.Second*30, client)
 }
 
 func InitJobs(rankingJob job.Job) *cron.Cron {

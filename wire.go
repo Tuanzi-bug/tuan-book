@@ -58,6 +58,7 @@ func InitWebServer() *App {
 		// 定时任务
 		ioc.InitJobs,
 		ioc.InitRankingJob,
+		ioc.InitRlockClient,
 		// 数据层
 		//dao.NewUserDAO,
 		//dao.NewGORMArticleDAO,
