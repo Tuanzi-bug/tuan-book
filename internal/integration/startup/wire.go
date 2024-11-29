@@ -4,6 +4,7 @@ package startup
 
 import (
 	"github.com/Tuanzi-bug/tuan-book/internal/events/article"
+	"github.com/Tuanzi-bug/tuan-book/internal/job"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
@@ -43,6 +44,16 @@ var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
 	repository.NewCachedInteractiveRepository,
 	service.NewInteractiveService,
 )
+
+var jobProviderSet = wire.NewSet(
+	service.NewCronJobService,
+	repository.NewPreemptJobRepository,
+	dao.NewGORMJobDAO)
+
+func InitJobScheduler() *job.Scheduler {
+	wire.Build(jobProviderSet, thirdPartySet, job.NewScheduler)
+	return &job.Scheduler{}
+}
 
 func InitWebServer() *gin.Engine {
 	wire.Build(

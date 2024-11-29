@@ -8,6 +8,7 @@ package startup
 
 import (
 	"github.com/Tuanzi-bug/tuan-book/internal/events/article"
+	"github.com/Tuanzi-bug/tuan-book/internal/job"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/cache"
 	"github.com/Tuanzi-bug/tuan-book/internal/repository/dao"
@@ -20,6 +21,15 @@ import (
 )
 
 // Injectors from wire.go:
+
+func InitJobScheduler() *job.Scheduler {
+	db := ioc.InitDB()
+	jobDAO := dao.NewGORMJobDAO(db)
+	cronJobRepository := repository.NewPreemptJobRepository(jobDAO)
+	cronJobService := service.NewCronJobService(cronJobRepository)
+	scheduler := job.NewScheduler(cronJobService)
+	return scheduler
+}
 
 func InitWebServer() *gin.Engine {
 	cmdable := InitRedis()
@@ -94,3 +104,5 @@ var userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository
 var articlSvcProvider = wire.NewSet(repository.NewCacheArticleRepository, cache.NewArticleRedisCache, dao.NewGORMArticleDAO, service.NewArticleService, article.NewSaramaSyncProducer)
 
 var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO, cache.NewInteractiveRedisCache, repository.NewCachedInteractiveRepository, service.NewInteractiveService)
+
+var jobProviderSet = wire.NewSet(service.NewCronJobService, repository.NewPreemptJobRepository, dao.NewGORMJobDAO)
